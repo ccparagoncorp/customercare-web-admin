@@ -1,0 +1,15 @@
+{
+  "header": {
+    "searchPlaceholder": "Cari...",
+    "notifications": "Notifikasi",
+    "profile": "Profil",
+    "settings": "Pengaturan",
+    "logout": "Keluar"
+  },
+  "breadcrumb": {
+    "home": "Beranda",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "agent": "Agent"
+  }
+}

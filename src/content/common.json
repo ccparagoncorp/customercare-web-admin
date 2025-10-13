@@ -1,0 +1,40 @@
+{
+  "actions": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "edit": "Edit",
+    "delete": "Hapus",
+    "add": "Tambah",
+    "view": "Lihat",
+    "download": "Download",
+    "upload": "Upload",
+    "search": "Cari",
+    "filter": "Filter",
+    "reset": "Reset",
+    "submit": "Submit",
+    "back": "Kembali",
+    "next": "Selanjutnya",
+    "previous": "Sebelumnya"
+  },
+  "status": {
+    "loading": "Memuat...",
+    "error": "Terjadi kesalahan",
+    "success": "Berhasil",
+    "warning": "Peringatan",
+    "info": "Informasi",
+    "pending": "Pending",
+    "approved": "Disetujui",
+    "rejected": "Ditolak",
+    "active": "Aktif",
+    "inactive": "Tidak Aktif"
+  },
+  "messages": {
+    "confirmDelete": "Apakah Anda yakin ingin menghapus item ini?",
+    "itemSaved": "Item berhasil disimpan",
+    "itemDeleted": "Item berhasil dihapus",
+    "itemUpdated": "Item berhasil diperbarui",
+    "noData": "Tidak ada data",
+    "selectItem": "Pilih item",
+    "required": "Field ini wajib diisi"
+  }
+}

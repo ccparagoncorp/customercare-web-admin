@@ -1,0 +1,145 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
+
+const prisma = new PrismaClient()
+
+// GET /api/users/[id] - Get user by ID
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session || (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN')) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    })
+
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(user)
+  } catch (error) {
+    console.error('Error fetching user:', error)
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// PUT /api/users/[id] - Update user
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session || session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { email, name, password, role, isActive } = await request.json()
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: params.id }
+    })
+
+    if (!existingUser) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 })
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== existingUser.email) {
+      const emailTaken = await prisma.user.findUnique({
+        where: { email }
+      })
+
+      if (emailTaken) {
+        return NextResponse.json({ message: 'Email already taken' }, { status: 400 })
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {}
+    if (email) updateData.email = email
+    if (name) updateData.name = name
+    if (role) updateData.role = role
+    if (typeof isActive === 'boolean') updateData.isActive = isActive
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12)
+    }
+
+    const user = await prisma.user.update({
+      where: { id: params.id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    })
+
+    return NextResponse.json(user)
+  } catch (error) {
+    console.error('Error updating user:', error)
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// DELETE /api/users/[id] - Delete user
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session || session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: params.id }
+    })
+
+    if (!existingUser) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 })
+    }
+
+    // Don't allow deleting super admin
+    if (existingUser.role === 'SUPER_ADMIN') {
+      return NextResponse.json({ message: 'Cannot delete super admin' }, { status: 400 })
+    }
+
+    await prisma.user.delete({
+      where: { id: params.id }
+    })
+
+    return NextResponse.json({ message: 'User deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  }
+}

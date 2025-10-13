@@ -1,0 +1,14 @@
+{
+  "admin": {
+    "title": "Dashboard Admin",
+    "welcome": "Selamat datang di Dashboard Admin",
+    "stats": {
+      "totalAgents": "Total Agent",
+      "totalTickets": "Total Tiket",
+      "totalKnowledge": "Total Knowledge",
+      "totalProducts": "Total Produk"
+    },
+    "recentActivity": "Aktivitas Terbaru",
+    "quickActions": "Aksi Cepat"
+  }
+}

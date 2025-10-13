@@ -1,0 +1,43 @@
+{
+  "admin": {
+    "dashboard": {
+      "label": "Dasbor",
+      "icon": {
+        "active": "/sidebar/dashboard-active.png",
+        "inactive": "/sidebar/dashboard-inactive.png"
+      }
+    },
+    "manageAgents": {
+      "label": "Kelola Agent",
+      "icon": {
+        "active": "/sidebar/agents-active.png",
+        "inactive": "/sidebar/agents-inactive.png"
+      }
+    },
+    "manageKnowledge": {
+      "label": "Kelola Knowledge",
+      "icon": {
+        "active": "/sidebar/knowledge-active.png",
+        "inactive": "/sidebar/knowledge-inactive.png"
+      }
+    },
+    "manageProducts": {
+      "label": "Kelola Produk",
+      "icon": {
+        "active": "/sidebar/produck-active.png",
+        "inactive": "/sidebar/produk-inactive.png"
+      }
+    },
+    "manageSOP": {
+      "label": "Kelola SOP",
+      "icon": {
+        "active": "/sidebar/sop-active.png",
+        "inactive": "/sidebar/sop-inactive.png"
+      }
+    },
+    "logout": {
+      "label": "Keluar",
+      "icon": "/sidebar/logout.png"
+    }
+  }
+}

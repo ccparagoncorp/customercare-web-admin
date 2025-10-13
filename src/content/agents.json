@@ -1,0 +1,31 @@
+{
+  "title": "Kelola Agent",
+  "description": "Kelola dan pantau semua agent customer care",
+  "addButton": "Tambah Agent",
+  "searchPlaceholder": "Cari agent...",
+  "table": {
+    "headers": {
+      "name": "Nama",
+      "email": "Email",
+      "actions": "Aksi"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Hapus"
+    },
+    "empty": {
+      "title": "Belum ada agent",
+      "description": "Mulai dengan menambahkan agent pertama Anda",
+      "button": "Tambah Agent Pertama"
+    }
+  },
+  "stats": {
+    "totalAgents": "Total Agent",
+    "totalSocMed": "Total SocMed",
+    "totalECom": "Total E-Com"
+  },
+  "categories": {
+    "socialMedia": "Social Media",
+    "eCommerce": "E-Commerce"
+  }
+}

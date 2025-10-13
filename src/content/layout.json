@@ -1,0 +1,14 @@
+{
+  "brand": {
+    "logo": "/logo.png",
+    "title": "Admin CC Paragon",
+    "description": "Customer Care Management System"
+  },
+  "theme": {
+    "primaryColor": "#03438f",
+    "secondaryColor": "#012f65",
+    "accentColor": "#ffffff",
+    "backgroundColor": "#f8fafc",
+    "sidebarWidth": "280px"
+  }
+}
