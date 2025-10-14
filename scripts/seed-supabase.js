@@ -22,9 +22,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 async function seedSupabase() {
-  const email = process.env.SUPER_ADMIN_EMAIL || "cckahf@gmail.com"
-  const password = process.env.SUPER_ADMIN_PASSWORD || "Paragon2023"
-  const name = process.env.SUPER_ADMIN_NAME || "Admin CC Paragon"
+  const email = process.env.SUPER_ADMIN_EMAIL 
+  const password = process.env.SUPER_ADMIN_PASSWORD 
+  const name = process.env.SUPER_ADMIN_NAME 
 
   console.log('Starting Supabase seed...')
   console.log('Email:', email)
