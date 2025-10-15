@@ -15,9 +15,9 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 async function main() {
-  const email = process.env.SUPER_ADMIN_EMAIL || "cckahf@gmail.com"
-  const password = process.env.SUPER_ADMIN_PASSWORD || "Paragon2023"
-  const name = process.env.SUPER_ADMIN_NAME || "Admin CC Paragon" 
+  const email = process.env.SUPER_ADMIN_EMAIL || "admin@gmail.com"
+  const password = process.env.SUPER_ADMIN_PASSWORD || "admin123"
+  const name = process.env.SUPER_ADMIN_NAME || "Admin" 
 
   console.log('Starting super admin seed with Supabase Auth...')
   console.log('Email:', email)

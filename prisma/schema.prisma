@@ -135,7 +135,7 @@ model User {
 }
 
 model Agent {
-  id        String   @id @default(cuid())
+  id        String   @id
   name      String
   email     String   @unique
   password  String

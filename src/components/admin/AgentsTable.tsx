@@ -58,6 +58,30 @@ export function AgentsTable() {
     console.log('Agent added successfully!')
   }
 
+  const handleDeleteAgent = async (agentId: string, agentName: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus agent "${agentName}"?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/agents?id=${agentId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete agent')
+      }
+
+      // Refresh agents list after deletion
+      fetchAgents()
+      console.log('Agent deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting agent:', error)
+      alert('Gagal menghapus agent. Silakan coba lagi.')
+    }
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
       {/* Header */}
@@ -156,13 +180,14 @@ export function AgentsTable() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-gray-600 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               className="text-gray-600 hover:text-red-600 hover:bg-red-50"
+                               onClick={() => handleDeleteAgent(agent.id, agent.name)}
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
                     </div>
                   </td>
                 </tr>

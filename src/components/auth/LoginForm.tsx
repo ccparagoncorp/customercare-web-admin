@@ -122,20 +122,8 @@ export function LoginForm() {
               {...register("password")}
               placeholder={login.form.passwordPlaceholder}
               disabled={isLoading}
-              className="pl-10 pr-10 h-11 rounded-lg border-gray-300 focus:border-[#03438f] focus:ring-[#03438f] bg-white/80 backdrop-blur-sm"
+              className="pl-10 pr-2 h-11 rounded-lg border-gray-300 focus:border-[#03438f] focus:ring-[#03438f] bg-white/80 backdrop-blur-sm"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors w-8"
-              disabled={isLoading}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
           </div>
           {errors.password && (
             <p className="text-sm text-red-600">{errors.password.message}</p>

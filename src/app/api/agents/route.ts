@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient, UserRole } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Check if agent already exists in database
     const existingAgent = await prisma.agent.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase().trim() }
     })
 
     if (existingAgent) {
@@ -77,14 +78,63 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // No need to create in Supabase Auth since agents are just data records
+    // Check if user already exists in Supabase Auth
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    
+    if (listError) {
+      console.error('Error listing users:', listError)
+      return NextResponse.json(
+        { message: 'Error checking existing users' },
+        { status: 500 }
+      )
+    }
+
+    console.log('Checking for existing user:', email.toLowerCase())
+    console.log('Total users in Supabase Auth:', users.users.length)
+    console.log('Existing emails:', users.users.map(u => u.email))
+
+    const existingAuthUser = users.users.find(u => u.email?.toLowerCase().trim() === email.toLowerCase().trim())
+    
+    if (existingAuthUser) {
+      console.log('Found existing user:', existingAuthUser.email)
+      return NextResponse.json(
+        { message: 'User with this email already exists in authentication system' },
+        { status: 409 }
+      )
+    }
+
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.toLowerCase().trim(),
+      password,
+      email_confirm: true,
+      user_metadata: {
+        name,
+        role: 'AGENT',
+        category: category
+      }
+    })
+
+    if (authError) {
+      console.error('Error creating auth user:', authError)
+      return NextResponse.json(
+        { message: 'Error creating user in authentication system' },
+        { status: 500 }
+      )
+    }
+
+    console.log('✅ Auth user created:', authData.user.id)
+
+    // Hash password before storing in database
+    const hashedPassword = await bcrypt.hash(password, 12)
 
     // Create agent profile in database
     const newAgent = await prisma.agent.create({
       data: {
+        id: authData.user.id, // Use Supabase Auth user ID
         name: name.trim(),
-        email: email.toLowerCase(),
-        password: password,
+        email: email.toLowerCase().trim(),
+        password: hashedPassword, // Store hashed password
         category: category,
         isActive: true
       }
@@ -183,5 +233,74 @@ export async function GET(request: NextRequest) {
     )
   } finally {
     await prisma.$disconnect()
+  }
+}
+
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions)
+
+  if (!session || (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN')) {
+    return NextResponse.json(
+      { message: 'Unauthorized' },
+      { status: 403 }
+    )
+  }
+
+  const { searchParams } = new URL(request.url)
+  const agentId = searchParams.get('id')
+
+  if (!agentId) {
+    return NextResponse.json(
+      { message: 'Agent ID is required' },
+      { status: 400 }
+    )
+  }
+
+  try {
+    // Check if agent exists in database
+    const existingAgent = await prisma.agent.findUnique({
+      where: { id: agentId }
+    })
+
+    if (!existingAgent) {
+      return NextResponse.json(
+        { message: 'Agent not found' },
+        { status: 404 }
+      )
+    }
+
+    console.log('Deleting agent:', existingAgent.email)
+
+    // Delete user from Supabase Auth
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(agentId)
+
+    if (authDeleteError) {
+      console.error('Error deleting user from Supabase Auth:', authDeleteError)
+      return NextResponse.json(
+        { message: 'Error deleting user from authentication system' },
+        { status: 500 }
+      )
+    }
+
+    console.log('✅ User deleted from Supabase Auth')
+
+    // Delete agent from database
+    await prisma.agent.delete({
+      where: { id: agentId }
+    })
+
+    console.log('✅ Agent deleted from database')
+
+    return NextResponse.json(
+      { message: 'Agent deleted successfully' },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('Error deleting agent:', error)
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
