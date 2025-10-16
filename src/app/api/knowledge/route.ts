@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
-import { uploadFileServer, deleteFileServer } from '@/lib/supabase-storage'
+import { uploadFileServer, deleteFileServer, deleteFilesServer } from '@/lib/supabase-storage'
 
 // GET /api/knowledge - Get all knowledge with search and pagination
 export async function GET(request: NextRequest) {
@@ -58,7 +58,23 @@ export async function GET(request: NextRequest) {
                   id: true,
                   name: true,
                   description: true,
-                  logos: true
+                  logos: true,
+                  jenisDetailKnowledges: {
+                    select: {
+                      id: true,
+                      name: true,
+                      description: true,
+                      logos: true,
+                      produkJenisDetailKnowledges: {
+                        select: {
+                          id: true,
+                          name: true,
+                          description: true,
+                          logos: true
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -107,7 +123,19 @@ export async function POST(request: NextRequest) {
     const description = formData.get('description') as string
     const createdBy = (formData.get('createdBy') as string) || null
     const logoFile = formData.get('logo') as File
-    const details = JSON.parse(formData.get('details') as string || '[]') as Array<{ index: number; name: string; description: string }>
+    const details = JSON.parse(formData.get('details') as string || '[]') as Array<{ 
+      index: number; 
+      name: string; 
+      description: string;
+      jenisDetails: Array<{
+        name: string;
+        description: string;
+        produkJenisDetails: Array<{
+          name: string;
+          description: string;
+        }>;
+      }>;
+    }>
 
     // Validate required fields
     if (!title || !description) {
@@ -143,17 +171,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve detail logo uploads (if any index has an accompanying file)
-    const resolvedDetails = [] as Array<{ name: string; description: string; logoUrl: string | null; logos: string[] }>
+    const resolvedDetails = [] as Array<{ 
+      name: string; 
+      description: string; 
+      logos: string[];
+      jenisDetails: Array<{
+        name: string;
+        description: string;
+        logos: string[];
+        produkJenisDetails: Array<{
+          name: string;
+          description: string;
+          logos: string[];
+        }>;
+      }>;
+    }>
+    
     for (const d of details) {
       const file = formData.get(`detailLogo_${d.index}`) as File | null
-      let logoUrl: string | null = null
       const logos: string[] = []
       if (file && file.size > 0) {
         const up = await uploadFileServer(file, 'knowledge/detail')
         if (up.error) {
           return NextResponse.json({ message: 'Failed to upload detail logo' }, { status: 500 })
         }
-        logoUrl = up.url
         logos.push(up.url as string)
       }
       // multiple detail logos: detailLogo_{index}_{j}
@@ -165,11 +206,87 @@ export async function POST(request: NextRequest) {
           const up2 = await uploadFileServer(ff, 'knowledge/detail')
           if (up2.error) return NextResponse.json({ message: 'Failed to upload detail logo' }, { status: 500 })
           logos.push(up2.url as string)
-          if (!logoUrl) logoUrl = up2.url
         }
         j++
       }
-      resolvedDetails.push({ name: d.name, description: d.description, logoUrl, logos })
+
+      // Handle jenis details
+      const resolvedJenisDetails = []
+      for (let jenisIdx = 0; jenisIdx < d.jenisDetails.length; jenisIdx++) {
+        const jenis = d.jenisDetails[jenisIdx]
+        const jenisFile = formData.get(`jenisLogo_${d.index}_${jenisIdx}`) as File | null
+        const jenisLogos: string[] = []
+        
+        if (jenisFile && jenisFile.size > 0) {
+          const up = await uploadFileServer(jenisFile, 'knowledge/jenis')
+          if (up.error) {
+            return NextResponse.json({ message: 'Failed to upload jenis logo' }, { status: 500 })
+          }
+          jenisLogos.push(up.url as string)
+        }
+        
+        // multiple jenis logos: jenisLogo_{index}_{jenisIdx}_{k}
+        let k = 0
+        while (true) {
+          const ff = formData.get(`jenisLogo_${d.index}_${jenisIdx}_${k}`) as File | null
+          if (!ff) break
+          if (ff.size > 0) {
+            const up2 = await uploadFileServer(ff, 'knowledge/jenis')
+            if (up2.error) return NextResponse.json({ message: 'Failed to upload jenis logo' }, { status: 500 })
+            jenisLogos.push(up2.url as string)
+          }
+          k++
+        }
+
+        // Handle produk jenis details
+        const resolvedProdukDetails = []
+        for (let produkIdx = 0; produkIdx < jenis.produkJenisDetails.length; produkIdx++) {
+          const produk = jenis.produkJenisDetails[produkIdx]
+          const produkFile = formData.get(`produkLogo_${d.index}_${jenisIdx}_${produkIdx}`) as File | null
+          const produkLogos: string[] = []
+          
+          if (produkFile && produkFile.size > 0) {
+            const up = await uploadFileServer(produkFile, 'knowledge/produk')
+            if (up.error) {
+              return NextResponse.json({ message: 'Failed to upload produk logo' }, { status: 500 })
+            }
+            produkLogos.push(up.url as string)
+          }
+          
+          // multiple produk logos: produkLogo_{index}_{jenisIdx}_{produkIdx}_{l}
+          let l = 0
+          while (true) {
+            const ff = formData.get(`produkLogo_${d.index}_${jenisIdx}_${produkIdx}_${l}`) as File | null
+            if (!ff) break
+            if (ff.size > 0) {
+              const up2 = await uploadFileServer(ff, 'knowledge/produk')
+              if (up2.error) return NextResponse.json({ message: 'Failed to upload produk logo' }, { status: 500 })
+              produkLogos.push(up2.url as string)
+            }
+            l++
+          }
+
+          resolvedProdukDetails.push({
+            name: produk.name.trim(),
+            description: produk.description || '',
+            logos: produkLogos
+          })
+        }
+
+        resolvedJenisDetails.push({
+          name: jenis.name.trim(),
+          description: jenis.description || '',
+          logos: jenisLogos,
+          produkJenisDetails: resolvedProdukDetails
+        })
+      }
+
+      resolvedDetails.push({ 
+        name: d.name, 
+        description: d.description,
+        logos,
+        jenisDetails: resolvedJenisDetails
+      })
     }
 
     // Create knowledge with details using per-request Prisma client
@@ -186,7 +303,21 @@ export async function POST(request: NextRequest) {
               create: resolvedDetails.map((detail) => ({
                 name: detail.name.trim(),
                 description: detail.description || '',
-                logos: detail.logos
+                logos: detail.logos,
+                jenisDetailKnowledges: {
+                  create: detail.jenisDetails.map((jenis) => ({
+                    name: jenis.name.trim(),
+                    description: jenis.description || '',
+                    logos: jenis.logos,
+                    produkJenisDetailKnowledges: {
+                      create: jenis.produkJenisDetails.map((produk) => ({
+                        name: produk.name.trim(),
+                        description: produk.description || '',
+                        logos: produk.logos
+                      }))
+                    }
+                  }))
+                }
               }))
             }
           },
@@ -204,7 +335,23 @@ export async function POST(request: NextRequest) {
                 id: true,
                 name: true,
                 description: true,
-                logos: true
+                logos: true,
+                jenisDetailKnowledges: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    logos: true,
+                    produkJenisDetailKnowledges: {
+                      select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        logos: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -264,7 +411,15 @@ export async function DELETE(request: NextRequest) {
             logos: true,
             detailKnowledges: {
               select: {
-                logos: true
+                logos: true,
+                jenisDetailKnowledges: {
+                  select: {
+                    logos: true,
+                    produkJenisDetailKnowledges: {
+                      select: { logos: true }
+                    }
+                  }
+                }
               }
             }
           }
@@ -281,18 +436,22 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Delete logos from storage (best-effort)
-    if (existingKnowledge.logos?.length) {
-      for (const url of existingKnowledge.logos) {
-        await deleteFileServer(url)
-      }
-    }
+    // Collect all logo URLs across all levels and delete in one batch
+    const urlsToDelete: string[] = []
+    if (existingKnowledge.logos?.length) urlsToDelete.push(...existingKnowledge.logos)
     for (const d of existingKnowledge.detailKnowledges) {
-      if (d.logos?.length) {
-        for (const url of d.logos) {
-          await deleteFileServer(url)
+      if (d.logos?.length) urlsToDelete.push(...d.logos)
+      const jenisList = (d as any).jenisDetailKnowledges || []
+      for (const j of jenisList) {
+        if (j.logos?.length) urlsToDelete.push(...j.logos)
+        const produkList = j.produkJenisDetailKnowledges || []
+        for (const p of produkList) {
+          if (p.logos?.length) urlsToDelete.push(...p.logos)
         }
       }
+    }
+    if (urlsToDelete.length > 0) {
+      await deleteFilesServer(urlsToDelete)
     }
 
     // Delete knowledge (cascades detailKnowledges via relation)
@@ -339,6 +498,10 @@ export async function PUT(request: NextRequest) {
     const updateNotes = (formData.get('updateNotes') as string) || null
     const logoFile = formData.get('logo') as File | null
     const detailsRaw = formData.get('details') as string | null
+    const removedLogos = JSON.parse(formData.get('removedLogos') as string || '[]') as string[]
+    const removedDetailLogos = JSON.parse(formData.get('removedDetailLogos') as string || '[]') as Array<{ detailId: string, logos: string[] }>
+    const removedJenisLogos = JSON.parse(formData.get('removedJenisLogos') as string || '[]') as Array<{ jenisId: string, logos: string[] }>
+    const removedProdukLogos = JSON.parse(formData.get('removedProdukLogos') as string || '[]') as Array<{ produkId: string, logos: string[] }>
 
     if (!id) {
       return NextResponse.json({ message: 'Knowledge ID is required' }, { status: 400 })
@@ -354,6 +517,29 @@ export async function PUT(request: NextRequest) {
     })
     if (!existing) {
       return NextResponse.json({ message: 'Knowledge not found' }, { status: 404 })
+    }
+
+    // Delete removed logos from storage
+    for (const logoUrl of removedLogos) {
+      await deleteFileServer(logoUrl)
+    }
+    
+    for (const { logos } of removedDetailLogos) {
+      for (const logoUrl of logos) {
+        await deleteFileServer(logoUrl)
+      }
+    }
+    
+    for (const { logos } of removedJenisLogos) {
+      for (const logoUrl of logos) {
+        await deleteFileServer(logoUrl)
+      }
+    }
+    
+    for (const { logos } of removedProdukLogos) {
+      for (const logoUrl of logos) {
+        await deleteFileServer(logoUrl)
+      }
     }
 
     let logoUrl: string | null | undefined = undefined
@@ -379,11 +565,40 @@ export async function PUT(request: NextRequest) {
 
     // If details provided, rebuild detailKnowledges (replace all)
     if (detailsRaw) {
-      const parsed = JSON.parse(detailsRaw) as Array<{ index: number; name: string; description: string; existingLogoUrl?: string | null }>
-      const resolved: Array<{ name: string; description: string; logo: string | null; logos: string[] }> = []
+      const parsed = JSON.parse(detailsRaw) as Array<{ 
+        index: number; 
+        name: string; 
+        description: string; 
+        existingLogoUrl?: string | null;
+        jenisDetails: Array<{
+          name: string;
+          description: string;
+          existingLogoUrl?: string | null;
+          produkJenisDetails: Array<{
+            name: string;
+            description: string;
+            existingLogoUrl?: string | null;
+          }>;
+        }>;
+      }>
+      const resolved: Array<{ 
+        name: string; 
+        description: string; 
+        logos: string[];
+        jenisDetails: Array<{
+          name: string;
+          description: string;
+          logos: string[];
+          produkJenisDetails: Array<{
+            name: string;
+            description: string;
+            logos: string[];
+          }>;
+        }>;
+      }> = []
+      
       for (const d of parsed) {
         const file = formData.get(`detailLogo_${d.index}`) as File | null
-        let detailLogo: string | null = d.existingLogoUrl ?? null
         const logos: string[] = []
         
         if (file && file.size > 0) {
@@ -391,7 +606,6 @@ export async function PUT(request: NextRequest) {
           if (up.error) {
             return NextResponse.json({ message: 'Failed to upload detail logo' }, { status: 500 })
           }
-          detailLogo = up.url
           logos.push(up.url as string)
         }
         
@@ -404,12 +618,87 @@ export async function PUT(request: NextRequest) {
             const up2 = await uploadFileServer(ff, 'knowledge/detail')
             if (up2.error) return NextResponse.json({ message: 'Failed to upload detail logo' }, { status: 500 })
             logos.push(up2.url as string)
-            if (!detailLogo) detailLogo = up2.url
           }
           j++
         }
+
+        // Handle jenis details
+        const resolvedJenisDetails = []
+        for (let jenisIdx = 0; jenisIdx < d.jenisDetails.length; jenisIdx++) {
+          const jenis = d.jenisDetails[jenisIdx]
+          const jenisFile = formData.get(`jenisLogo_${d.index}_${jenisIdx}`) as File | null
+          const jenisLogos: string[] = []
+          
+          if (jenisFile && jenisFile.size > 0) {
+            const up = await uploadFileServer(jenisFile, 'knowledge/jenis')
+            if (up.error) {
+              return NextResponse.json({ message: 'Failed to upload jenis logo' }, { status: 500 })
+            }
+            jenisLogos.push(up.url as string)
+          }
+          
+          // multiple jenis logos: jenisLogo_{index}_{jenisIdx}_{k}
+          let k = 0
+          while (true) {
+            const ff = formData.get(`jenisLogo_${d.index}_${jenisIdx}_${k}`) as File | null
+            if (!ff) break
+            if (ff.size > 0) {
+              const up2 = await uploadFileServer(ff, 'knowledge/jenis')
+              if (up2.error) return NextResponse.json({ message: 'Failed to upload jenis logo' }, { status: 500 })
+              jenisLogos.push(up2.url as string)
+            }
+            k++
+          }
+
+          // Handle produk jenis details
+          const resolvedProdukDetails = []
+          for (let produkIdx = 0; produkIdx < jenis.produkJenisDetails.length; produkIdx++) {
+            const produk = jenis.produkJenisDetails[produkIdx]
+            const produkFile = formData.get(`produkLogo_${d.index}_${jenisIdx}_${produkIdx}`) as File | null
+            const produkLogos: string[] = []
+            
+            if (produkFile && produkFile.size > 0) {
+              const up = await uploadFileServer(produkFile, 'knowledge/produk')
+              if (up.error) {
+                return NextResponse.json({ message: 'Failed to upload produk logo' }, { status: 500 })
+              }
+              produkLogos.push(up.url as string)
+            }
+            
+            // multiple produk logos: produkLogo_{index}_{jenisIdx}_{produkIdx}_{l}
+            let l = 0
+            while (true) {
+              const ff = formData.get(`produkLogo_${d.index}_${jenisIdx}_${produkIdx}_${l}`) as File | null
+              if (!ff) break
+              if (ff.size > 0) {
+                const up2 = await uploadFileServer(ff, 'knowledge/produk')
+                if (up2.error) return NextResponse.json({ message: 'Failed to upload produk logo' }, { status: 500 })
+                produkLogos.push(up2.url as string)
+              }
+              l++
+            }
+
+            resolvedProdukDetails.push({
+              name: produk.name.trim(),
+              description: produk.description || '',
+              logos: produkLogos
+            })
+          }
+
+          resolvedJenisDetails.push({
+            name: jenis.name.trim(),
+            description: jenis.description || '',
+            logos: jenisLogos,
+            produkJenisDetails: resolvedProdukDetails
+          })
+        }
         
-        resolved.push({ name: d.name?.trim() || '', description: d.description || '', logo: detailLogo, logos })
+        resolved.push({ 
+          name: d.name?.trim() || '', 
+          description: d.description || '', 
+          logos,
+          jenisDetails: resolvedJenisDetails
+        })
       }
       // Clear existing details and update knowledge using per-request Prisma client
       await withRetry(async () => {
@@ -425,7 +714,25 @@ export async function PUT(request: NextRequest) {
               updatedBy,
               ...(updateNotes ? { updateNotes: updateNotes.trim() } : {}),
               detailKnowledges: {
-                create: resolved.map(r => ({ name: r.name, description: r.description, logos: r.logos }))
+                create: resolved.map(r => ({ 
+                  name: r.name, 
+                  description: r.description, 
+                  logos: r.logos,
+                  jenisDetailKnowledges: {
+                    create: r.jenisDetails.map(jenis => ({
+                      name: jenis.name,
+                      description: jenis.description,
+                      logos: jenis.logos,
+                      produkJenisDetailKnowledges: {
+                        create: jenis.produkJenisDetails.map(produk => ({
+                          name: produk.name,
+                          description: produk.description,
+                          logos: produk.logos
+                        }))
+                      }
+                    }))
+                  }
+                }))
               }
             }
           })
@@ -472,7 +779,23 @@ export async function PUT(request: NextRequest) {
                 id: true, 
                 name: true, 
                 description: true, 
-                logos: true 
+                logos: true,
+                jenisDetailKnowledges: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    logos: true,
+                    produkJenisDetailKnowledges: {
+                      select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        logos: true
+                      }
+                    }
+                  }
+                }
               } 
             }
           }

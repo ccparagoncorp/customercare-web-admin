@@ -16,6 +16,22 @@ function getServerSupabase() {
   return createClient(supabaseUrl, supabaseServiceRoleKey)
 }
 
+async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 400): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (e: any) {
+      lastErr = e
+      const msg = String(e?.message || '')
+      const isTimeout = msg.includes('Connect Timeout') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('fetch failed')
+      if (i === attempts - 1 || !isTimeout) break
+      await new Promise(r => setTimeout(r, baseDelayMs * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
 export async function uploadFile(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
   try {
     // Generate unique filename
@@ -60,9 +76,9 @@ export async function uploadFileServer(file: File, path: string): Promise<{ url:
     const fileName = `${timestamp}_${randomString}.${fileExtension}`
     const fullPath = `${path}/${fileName}`
 
-    const { error } = await serverSupabase.storage
+    const { error } = await retry(() => serverSupabase.storage
       .from(bucketName)
-      .upload(fullPath, file, { cacheControl: '3600', upsert: false })
+      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 500)
 
     if (error) {
       console.error('Upload (server) error:', error)
@@ -132,5 +148,29 @@ export async function deleteFileServer(pathOrUrl: string): Promise<{ success: bo
   } catch (e) {
     console.error('Delete (server) unexpected error:', e)
     return { success: false, error: 'Failed to delete file (server)' }
+  }
+}
+
+// Server-only batch delete for multiple paths or public URLs
+export async function deleteFilesServer(pathsOrUrls: string[]): Promise<{ success: boolean; error: string | null; deleted: number }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const paths: string[] = []
+    for (const item of pathsOrUrls) {
+      const p = item.startsWith('http') ? extractPathFromPublicUrl(item) : item
+      if (p) paths.push(p)
+    }
+    if (paths.length === 0) {
+      return { success: false, error: 'No valid storage paths to delete', deleted: 0 }
+    }
+    const { error } = await serverSupabase.storage.from(bucketName).remove(paths)
+    if (error) {
+      console.error('Batch delete (server) error:', error)
+      return { success: false, error: error.message, deleted: 0 }
+    }
+    return { success: true, error: null, deleted: paths.length }
+  } catch (e) {
+    console.error('Batch delete (server) unexpected error:', e)
+    return { success: false, error: 'Failed to delete files (server)', deleted: 0 }
   }
 }

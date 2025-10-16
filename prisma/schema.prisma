@@ -170,16 +170,44 @@ model Knowledge {
 }
 
 model DetailKnowledge {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  logos       String[]
-  knowledgeId String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  id                     String                        @id @default(cuid())
+  name                   String
+  description            String?
+  logos                  String[]
+  knowledgeId            String
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  knowledge              Knowledge                     @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  jenisDetailKnowledges  JenisDetailKnowledge[]
 
   @@map("detail_knowledges")
+}
+
+model JenisDetailKnowledge {
+  id                          String                             @id @default(cuid())
+  name                        String
+  description                 String?
+  logos                       String[]
+  detailKnowledgeId           String
+  createdAt                   DateTime                           @default(now())
+  updatedAt                   DateTime                           @updatedAt
+  detailKnowledge             DetailKnowledge                    @relation(fields: [detailKnowledgeId], references: [id], onDelete: Cascade)
+  produkJenisDetailKnowledges ProdukJenisDetailKnowledge[]
+
+  @@map("jenis_detail_knowledges")
+}
+
+model ProdukJenisDetailKnowledge {
+  id                      String                @id @default(cuid())
+  name                    String
+  description             String?
+  logos                   String[]
+  jenisDetailKnowledgeId  String
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  jenisDetailKnowledge    JenisDetailKnowledge  @relation(fields: [jenisDetailKnowledgeId], references: [id], onDelete: Cascade)
+
+  @@map("produk_jenis_detail_knowledges")
 }
 
 enum UserRole {

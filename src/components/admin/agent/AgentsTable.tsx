@@ -245,7 +245,7 @@ export function AgentsTable() {
                       <div className="flex-shrink-0 h-10 w-10">
                         <div className="h-10 w-10 rounded-full bg-[#03438f] flex items-center justify-center">
                           <span className="text-white font-medium text-sm">
-                            {agent.name.charAt(0).toUpperCase()}
+                            {agent?.name?.split(' ').filter(Boolean).map(word => word[0].toUpperCase()).join('')}
                           </span>
                         </div>
                       </div>

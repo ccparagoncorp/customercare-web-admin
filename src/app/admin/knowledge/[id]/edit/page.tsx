@@ -8,6 +8,34 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Upload, Plus, Trash2 } from 'lucide-react'
+// import Image from 'next/image'
+
+// Component untuk menangani error loading gambar (tanpa console log)
+function ImageWithFallback({ src, alt, className, onError }: { src: string, alt: string, className: string, onError: () => void }) {
+  const [hasError, setHasError] = useState(false)
+  if (hasError || !src) {
+    return (
+      <div className={`${className} bg-gray-200 flex items-center justify-center rounded border`}>
+        <div className="text-center text-gray-500">
+          <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p className="text-xs">Gambar tidak dapat dimuat</p>
+        </div>
+      </div>
+    )
+  }
+  
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => { setHasError(true); onError() }}
+      style={{ maxWidth: '100%', height: 'auto' }}
+    />
+  )
+}
 
 export default function EditKnowledgePage() {
   const { data: session, status } = useSession()
@@ -21,7 +49,36 @@ export default function EditKnowledgePage() {
   const [updatedBy, setUpdatedBy] = useState('')
   const [updateNotes, setUpdateNotes] = useState('')
   const [logoFiles, setLogoFiles] = useState<File[]>([])
-  const [details, setDetails] = useState<Array<{ id: string; name: string; description: string; logos?: string[]; logo?: string; logoFile?: File; logoFiles?: File[] }>>([])
+  const [removedLogos, setRemovedLogos] = useState<string[]>([])
+  const [removedDetailLogos, setRemovedDetailLogos] = useState<Array<{ detailId: string, logos: string[] }>>([])
+  const [removedJenisLogos, setRemovedJenisLogos] = useState<Array<{ jenisId: string, logos: string[] }>>([])
+  const [removedProdukLogos, setRemovedProdukLogos] = useState<Array<{ produkId: string, logos: string[] }>>([])
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [details, setDetails] = useState<Array<{ 
+    id: string; 
+    name: string; 
+    description: string; 
+    logos?: string[]; 
+    logo?: string; 
+    logoFile?: File; 
+    logoFiles?: File[];
+    jenisDetails: Array<{
+      id?: string;
+      name: string;
+      description: string;
+      logos?: string[];
+      logoFile?: File;
+      logoFiles?: File[];
+      produkJenisDetails: Array<{
+        id?: string;
+        name: string;
+        description: string;
+        logos?: string[];
+        logoFile?: File;
+        logoFiles?: File[];
+      }>;
+    }>;
+  }>>([])
 
   useEffect(() => {
     if (status === 'loading') return
@@ -43,7 +100,26 @@ export default function EditKnowledgePage() {
         setData(item)
         setTitle(item.title || '')
         setDescription(item.description || '')
-        setDetails((item.detailKnowledges || []).map((d: any) => ({ id: d.id, name: d.name || '', description: d.description || '', logos: d.logos || [], logo: d.logos?.[0] || undefined })))
+        
+        setDetails((item.detailKnowledges || []).map((d: any) => ({ 
+          id: d.id, 
+          name: d.name || '', 
+          description: d.description || '', 
+          logos: d.logos || [], 
+          logo: d.logos?.[0] || undefined,
+          jenisDetails: (d.jenisDetailKnowledges || []).map((j: any) => ({
+            id: j.id,
+            name: j.name || '',
+            description: j.description || '',
+            logos: j.logos || [],
+            produkJenisDetails: (j.produkJenisDetailKnowledges || []).map((p: any) => ({
+              id: p.id,
+              name: p.name || '',
+              description: p.description || '',
+              logos: p.logos || []
+            }))
+          }))
+        })))
       } catch (e: any) {
         setError(e.message || 'Error')
       } finally {
@@ -54,13 +130,106 @@ export default function EditKnowledgePage() {
   }, [params?.id])
 
   const addDetail = () => {
-    setDetails(prev => ([...prev, { id: Math.random().toString(36).slice(2), name: '', description: '' }]))
+    setDetails(prev => ([...prev, { 
+      id: Math.random().toString(36).slice(2), 
+      name: '', 
+      description: '',
+      jenisDetails: []
+    }]))
   }
   const removeDetail = (id: string) => {
     setDetails(prev => prev.filter(d => d.id !== id))
   }
-  const updateDetail = (id: string, field: 'name' | 'description' | 'logoFile', value: any) => {
+  const updateDetail = (id: string, field: 'name' | 'description' | 'logoFile' | 'logoFiles' | 'logos', value: any) => {
     setDetails(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d))
+  }
+
+  const addJenisDetail = (detailId: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { ...d, jenisDetails: [...d.jenisDetails, { 
+            id: Math.random().toString(36).slice(2), 
+            name: '', 
+            description: '',
+            produkJenisDetails: []
+          }] }
+        : d
+    ))
+  }
+
+  const removeJenisDetail = (detailId: string, jenisId?: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { ...d, jenisDetails: d.jenisDetails.filter(j => j.id !== jenisId) }
+        : d
+    ))
+  }
+
+  const updateJenisDetail = (detailId: string, jenisId: string | undefined, field: string, value: any) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId ? { ...j, [field]: value } : j
+            )
+          }
+        : d
+    ))
+  }
+
+  const addProdukJenisDetail = (detailId: string, jenisId?: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId 
+                ? { ...j, produkJenisDetails: [...j.produkJenisDetails, { 
+                    id: Math.random().toString(36).slice(2), 
+                    name: '', 
+                    description: ''
+                  }] }
+                : j
+            )
+          }
+        : d
+    ))
+  }
+
+  const removeProdukJenisDetail = (detailId: string, jenisId?: string, produkId?: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId 
+                ? { ...j, produkJenisDetails: j.produkJenisDetails.filter(p => p.id !== produkId) }
+                : j
+            )
+          }
+        : d
+    ))
+  }
+
+  const updateProdukJenisDetail = (detailId: string, jenisId: string | undefined, produkId: string | undefined, field: string, value: any) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId 
+                ? { 
+                    ...j, 
+                    produkJenisDetails: j.produkJenisDetails.map(p => 
+                      p.id === produkId ? { ...p, [field]: value } : p
+                    )
+                  }
+                : j
+            )
+          }
+        : d
+    ))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,9 +251,43 @@ export default function EditKnowledgePage() {
           fd.append(`detailLogo_${idx}`, d.logoFiles[0])
           d.logoFiles.forEach((f, j) => { if (j > 0) fd.append(`detailLogo_${idx}_${j - 1}`, f) })
         }
-        return { index: idx, name: d.name, description: d.description, existingLogoUrl: d.logo || null }
+
+        // Handle jenis details
+        const jenisDetails = d.jenisDetails.map((j, jenisIdx) => {
+          if (j.logoFiles?.length) {
+            fd.append(`jenisLogo_${idx}_${jenisIdx}`, j.logoFiles[0])
+            j.logoFiles.forEach((f, k) => { if (k > 0) fd.append(`jenisLogo_${idx}_${jenisIdx}_${k - 1}`, f) })
+          }
+
+          // Handle produk jenis details
+          const produkDetails = j.produkJenisDetails.map((p, produkIdx) => {
+            if (p.logoFiles?.length) {
+              fd.append(`produkLogo_${idx}_${jenisIdx}_${produkIdx}`, p.logoFiles[0])
+              p.logoFiles.forEach((f, l) => { if (l > 0) fd.append(`produkLogo_${idx}_${jenisIdx}_${produkIdx}_${l - 1}`, f) })
+            }
+            return { name: p.name, description: p.description }
+          })
+
+          return {
+            name: j.name,
+            description: j.description,
+            produkJenisDetails: produkDetails
+          }
+        })
+
+        return { 
+          index: idx, 
+          name: d.name, 
+          description: d.description, 
+          existingLogoUrl: d.logo || null,
+          jenisDetails
+        }
       })
       fd.append('details', JSON.stringify(detailsMinimal))
+      fd.append('removedLogos', JSON.stringify(removedLogos))
+      fd.append('removedDetailLogos', JSON.stringify(removedDetailLogos))
+      fd.append('removedJenisLogos', JSON.stringify(removedJenisLogos))
+      fd.append('removedProdukLogos', JSON.stringify(removedProdukLogos))
       const res = await fetch('/api/knowledge', { method: 'PUT', body: fd })
       if (!res.ok) throw new Error('Failed to update')
       router.push('/admin/knowledge')
@@ -152,13 +355,61 @@ export default function EditKnowledgePage() {
               </div>
               {(logoFiles.length || data?.logos?.length) ? (
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {logoFiles.length
-                    ? logoFiles.map((f, idx) => (
-                        <img key={idx} src={URL.createObjectURL(f)} alt="Preview" className="w-full h-auto object-contain rounded border" />
-                      ))
-                    : (data?.logos || []).map((u: string, idx: number) => (
-                        <img key={idx} src={u} alt="Preview" className="w-full h-auto object-contain rounded border" />
-                      ))}
+                  {/* Show existing logos with delete button */}
+                  {(data?.logos || []).map((u: string, idx: number) => (
+                    <div key={`existing-${idx}`} className="relative group">
+                      <ImageWithFallback
+                        src={u}
+                        alt="Preview"
+                        className="w-full h-auto object-contain rounded border"
+                        onError={() => setImageErrors(prev => new Set([...prev, u]))}
+                      />
+                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const logoUrl = (data?.logos || [])[idx]
+                            setRemovedLogos(prev => [...prev, logoUrl])
+                            const newLogos = (data?.logos || []).filter((_logo: string, i: number) => i !== idx)
+                            setData({ ...data, logos: newLogos })
+                          }}
+                          className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">Logo {idx + 1}</div>
+                    </div>
+                  ))}
+                  {/* Show new uploaded files */}
+                  {logoFiles.map((f, idx) => (
+                    <div
+                      key={`new-${idx}`}
+                      className="relative group rounded border bg-white"
+                      style={{
+                        backgroundImage: `url(${URL.createObjectURL(f)})`,
+                        backgroundSize: 'contain',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        aspectRatio: '16/9',
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setLogoFiles((prev: File[]) => prev.filter((_file: File, i: number) => i !== idx))}
+                          className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/70 px-1 rounded">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -208,27 +459,296 @@ export default function EditKnowledgePage() {
                     </div>
                     {(d.logoFiles?.length || d.logos?.length) ? (
                       <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {/* Show existing logos */}
-                        {d.logos?.map((logoUrl, idx) => (
-                          <div key={`existing-${idx}`} className="relative">
-                            <img src={logoUrl} alt="Preview" className="w-full h-auto object-contain rounded border" />
+                        {/* Show existing logos with delete button */}
+                        {d.logos?.map((logoUrl: string, idx: number) => (
+                          <div key={`existing-${idx}`} className="relative group">
+                            <ImageWithFallback
+                              src={logoUrl}
+                              alt="Preview"
+                              className="w-full h-auto object-contain rounded border"
+                              onError={() => setImageErrors(prev => new Set([...prev, logoUrl]))}
+                            />
+                            <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                            <button
+                                type="button"
+                                onClick={() => {
+                              const logoUrl = (d.logos || [])[idx] as string
+                              setRemovedDetailLogos(prev => [...prev, { detailId: d.id, logos: [logoUrl] }])
+                              const newLogos = (d.logos || []).filter((_logo: string, i: number) => i !== idx)
+                                  updateDetail(d.id, 'logos', newLogos)
+                                }}
+                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
                             <div className="text-xs text-gray-600 mt-1">Logo {idx + 1}</div>
                           </div>
                         ))}
                         {/* Show new uploaded files */}
-                        {d.logoFiles?.map((f, idx) => (
-                          <div key={`new-${idx}`} className="relative">
-                            <img src={URL.createObjectURL(f)} alt="Preview" className="w-full h-auto object-contain rounded border" />
-                            <div className="text-xs text-gray-600 mt-1">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                        {d.logoFiles?.map((f: File, idx: number) => (
+                          <div
+                            key={`new-${idx}`}
+                            className="relative group rounded border bg-white"
+                            style={{
+                              backgroundImage: `url(${URL.createObjectURL(f)})`,
+                              backgroundSize: 'contain',
+                              backgroundPosition: 'center',
+                              backgroundRepeat: 'no-repeat',
+                              aspectRatio: '16/9',
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newFiles = (d.logoFiles || []).filter((_: File, i: number) => i !== idx)
+                                  updateDetail(d.id, 'logoFiles', newFiles)
+                                }}
+                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/70 px-1 rounded">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
                           </div>
                         ))}
-                        {(d.logos?.length || d.logoFiles?.length) && (
-                          <div className="col-span-full flex justify-end">
-                            <button type="button" className="text-red-500 hover:text-red-700" onClick={() => updateDetail(d.id, 'logoFiles', [])}>Hapus file baru</button>
-                          </div>
-                        )}
                       </div>
                     ) : null}
+                  </div>
+
+                  {/* Jenis Details Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-700">Jenis Detail</h4>
+                      <Button type="button" variant="outline" size="sm" className="text-[#03438f] border-[#03438f]" onClick={() => addJenisDetail(d.id)}>
+                        <Plus className="h-3 w-3 mr-1" /> Tambah Jenis
+                      </Button>
+                    </div>
+                    {d.jenisDetails.length === 0 && (
+                      <p className="text-xs text-gray-500">Belum ada jenis detail. Klik "Tambah Jenis" untuk menambahkan (opsional).</p>
+                    )}
+                    <div className="space-y-3">
+                      {d.jenisDetails.map((j, jenisIdx) => (
+                        <div key={j.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-medium text-gray-600">Jenis {jenisIdx + 1}</h5>
+                            <Button type="button" variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => removeJenisDetail(d.id, j.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs font-medium text-gray-600">Nama Jenis</Label>
+                              <Input value={j.name} onChange={(e) => updateJenisDetail(d.id, j.id, 'name', e.target.value)} placeholder="Nama jenis detail" className="text-sm" />
+                            </div>
+                            <div>
+                              <Label className="text-xs font-medium text-gray-600">Logo Jenis</Label>
+                              <div className="relative">
+                                <input id={`jenis-logo-${j.id}`} type="file" multiple accept="image/*" onChange={(e) => updateJenisDetail(d.id, j.id, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
+                                <label htmlFor={`jenis-logo-${j.id}`} className="flex items-center justify-center w-full px-3 py-4 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
+                                  <Upload className="h-3 w-3 text-gray-400 mr-2" />
+                                  <span className="text-xs text-gray-600">
+                                    {j.logoFiles?.length 
+                                      ? `${j.logoFiles.length} file baru` 
+                                      : j.logos?.length 
+                                        ? `${j.logos.length} logo - Upload tambahan`
+                                        : 'Upload logo'
+                                    }
+                                  </span>
+                                </label>
+                              </div>
+                              {/* Preview jenis logos */}
+                              {(j.logoFiles?.length || j.logos?.length) ? (
+                                <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                                  {/* Show existing logos with delete button */}
+                                  {j.logos?.map((logoUrl, idx) => (
+                                    <div key={`existing-${idx}`} className="relative group">
+                                      <ImageWithFallback
+                                        src={logoUrl}
+                                        alt="Preview"
+                                        className="w-full h-auto object-contain rounded border"
+                                        onError={() => setImageErrors(prev => new Set([...prev, logoUrl]))}
+                                      />
+                                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const logoUrl = (j.logos || [])[idx]
+                            setRemovedJenisLogos((prev) => [...prev, { jenisId: j.id as string, logos: [logoUrl] }])
+                                            const newLogos = (j.logos || []).filter((_, i) => i !== idx)
+                                            updateJenisDetail(d.id, j.id, 'logos', newLogos)
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">Logo {idx + 1}</div>
+                                    </div>
+                                  ))}
+                                  {/* Show new uploaded files */}
+                                  {j.logoFiles?.map((f, idx) => (
+                                    <div
+                                      key={`new-${idx}`}
+                                      className="relative group rounded border bg-white"
+                                      style={{
+                                        backgroundImage: `url(${URL.createObjectURL(f)})`,
+                                        backgroundSize: 'contain',
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        aspectRatio: '16/9',
+                                      }}
+                                    >
+                                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                                <button
+                                          type="button"
+                                          onClick={() => {
+                                    const newFiles = (j.logoFiles || []).filter((_file: File, i: number) => i !== idx)
+                                    updateJenisDetail(d.id, j.id as string, 'logoFiles', newFiles)
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                      <div className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/70 px-1 rounded">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-gray-600">Deskripsi Jenis</Label>
+                            <textarea value={j.description} onChange={(e) => updateJenisDetail(d.id, j.id, 'description', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#03438f] focus:border-transparent resize-none text-sm" placeholder="Deskripsi jenis detail"></textarea>
+                          </div>
+
+                          {/* Produk Jenis Details Section */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h6 className="text-xs font-medium text-gray-600">Produk Jenis Detail</h6>
+                              <Button type="button" variant="outline" size="sm" className="text-[#03438f] border-[#03438f]" onClick={() => addProdukJenisDetail(d.id, j.id)}>
+                                <Plus className="h-3 w-3 mr-1" /> Tambah Produk
+                              </Button>
+                            </div>
+                            {j.produkJenisDetails.length === 0 && (
+                              <p className="text-xs text-gray-500">Belum ada produk jenis detail. Klik "Tambah Produk" untuk menambahkan (opsional).</p>
+                            )}
+                            <div className="space-y-2">
+                              {j.produkJenisDetails.map((p, produkIdx) => (
+                                <div key={p.id} className="bg-white border border-gray-200 rounded p-3 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-600">Produk {produkIdx + 1}</span>
+                              <Button type="button" variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => removeProdukJenisDetail(d.id, j.id ? String(j.id) : '', p.id ? String(p.id) : '')}>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-600">Nama Produk</Label>
+                                      <Input value={p.name} onChange={(e) => updateProdukJenisDetail(d.id, j.id as string, p.id as string, 'name', e.target.value)} placeholder="Nama produk" className="text-xs" />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-600">Logo Produk</Label>
+                                      <div className="relative">
+                                        <input id={`produk-logo-${p.id}`} type="file" multiple accept="image/*" onChange={(e) => updateProdukJenisDetail(d.id, j.id as string, p.id as string, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
+                                        <label htmlFor={`produk-logo-${p.id}`} className="flex items-center justify-center w-full px-2 py-3 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
+                                          <Upload className="h-3 w-3 text-gray-400 mr-1" />
+                                          <span className="text-xs text-gray-600">
+                                            {p.logoFiles?.length 
+                                              ? `${p.logoFiles.length} file baru` 
+                                              : p.logos?.length 
+                                                ? `${p.logos.length} logo - Upload tambahan`
+                                                : 'Upload'
+                                            }
+                                          </span>
+                                        </label>
+                                      </div>
+                                      {/* Preview produk logos */}
+                                      {(p.logoFiles?.length || p.logos?.length) ? (
+                                        <div className="mt-2 grid grid-cols-2 gap-2">
+                                          {/* Show existing logos with delete button */}
+                                          {p.logos?.map((logoUrl, idx) => (
+                                            <div key={`existing-${idx}`} className="relative group">
+                                              <ImageWithFallback
+                                                src={logoUrl}
+                                                alt="Preview"
+                                                className="w-full h-auto object-contain rounded border"
+                                                onError={() => setImageErrors(prev => new Set([...prev, logoUrl]))}
+                                              />
+                                              <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const logoUrl = (p.logos || [])[idx]
+                            setRemovedProdukLogos((prev) => [...prev, { produkId: p.id as string, logos: [logoUrl] }])
+                                                    const newLogos = (p.logos || []).filter((_logo: string, i: number) => i !== idx)
+                                                    updateProdukJenisDetail(d.id, j.id as string, p.id as string, 'logos', newLogos)
+                                                  }}
+                                                  className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                                                >
+                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                  </svg>
+                                                </button>
+                                              </div>
+                                              <div className="text-xs text-gray-500 mt-1">Logo {idx + 1}</div>
+                                            </div>
+                                          ))}
+                                          {/* Show new uploaded files */}
+                                          {p.logoFiles?.map((f, idx) => (
+                                            <div
+                                              key={`new-${idx}`}
+                                              className="relative group rounded border bg-white"
+                                              style={{
+                                                backgroundImage: `url(${URL.createObjectURL(f)})`,
+                                                backgroundSize: 'contain',
+                                                backgroundPosition: 'center',
+                                                backgroundRepeat: 'no-repeat',
+                                                aspectRatio: '16/9',
+                                              }}
+                                            >
+                                              <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const newFiles = (p.logoFiles || []).filter((_file: File, i: number) => i !== idx)
+                                                    updateProdukJenisDetail(d.id, j.id as string, p.id as string, 'logoFiles', newFiles)
+                                                  }}
+                                                  className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                                                >
+                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                  </svg>
+                                                </button>
+                                              </div>
+                                              <div className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/70 px-1 rounded">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs font-medium text-gray-600">Deskripsi Produk</Label>
+                                    <textarea value={p.description} onChange={(e) => updateProdukJenisDetail(d.id, j.id, p.id, 'description', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#03438f] focus:border-transparent resize-none text-xs" placeholder="Deskripsi produk"></textarea>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}

@@ -34,7 +34,23 @@ export async function GET(
                 id: true,
                 name: true,
                 description: true,
-                logos: true
+                logos: true,
+                jenisDetailKnowledges: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    logos: true,
+                    produkJenisDetailKnowledges: {
+                      select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        logos: true
+                      }
+                    }
+                  }
+                }
               },
               orderBy: { createdAt: 'asc' }
             }

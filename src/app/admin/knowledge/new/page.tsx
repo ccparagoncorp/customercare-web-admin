@@ -9,11 +9,27 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Upload, Plus, Trash2 } from 'lucide-react'
 
+interface ProdukJenisDetailField {
+  id: string
+  name: string
+  description: string
+  logoFile?: File
+}
+
+interface JenisDetailField {
+  id: string
+  name: string
+  description: string
+  logoFile?: File
+  produkJenisDetails: ProdukJenisDetailField[]
+}
+
 interface DetailField {
   id: string
   name: string
   description: string
   logoFile?: File
+  jenisDetails: JenisDetailField[]
 }
 
 export default function NewKnowledgePage() {
@@ -37,7 +53,12 @@ export default function NewKnowledgePage() {
   }, [session, status, router])
 
   const addDetail = () => {
-    setDetails(prev => ([...prev, { id: Date.now().toString(), name: '', description: '' }]))
+    setDetails(prev => ([...prev, { 
+      id: Date.now().toString(), 
+      name: '', 
+      description: '',
+      jenisDetails: []
+    }]))
   }
 
   const removeDetail = (id: string) => {
@@ -46,6 +67,94 @@ export default function NewKnowledgePage() {
 
   const updateDetail = (id: string, field: keyof DetailField, value: any) => {
     setDetails(prev => prev.map(d => d.id === id ? { ...d, [field]: value } as DetailField : d))
+  }
+
+  const addJenisDetail = (detailId: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { ...d, jenisDetails: [...d.jenisDetails, { 
+            id: Date.now().toString(), 
+            name: '', 
+            description: '',
+            produkJenisDetails: []
+          }] }
+        : d
+    ))
+  }
+
+  const removeJenisDetail = (detailId: string, jenisId: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { ...d, jenisDetails: d.jenisDetails.filter(j => j.id !== jenisId) }
+        : d
+    ))
+  }
+
+  const updateJenisDetail = (detailId: string, jenisId: string, field: keyof JenisDetailField, value: any) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId ? { ...j, [field]: value } as JenisDetailField : j
+            )
+          }
+        : d
+    ))
+  }
+
+  const addProdukJenisDetail = (detailId: string, jenisId: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId 
+                ? { ...j, produkJenisDetails: [...j.produkJenisDetails, { 
+                    id: Date.now().toString(), 
+                    name: '', 
+                    description: ''
+                  }] }
+                : j
+            )
+          }
+        : d
+    ))
+  }
+
+  const removeProdukJenisDetail = (detailId: string, jenisId: string, produkId: string) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId 
+                ? { ...j, produkJenisDetails: j.produkJenisDetails.filter(p => p.id !== produkId) }
+                : j
+            )
+          }
+        : d
+    ))
+  }
+
+  const updateProdukJenisDetail = (detailId: string, jenisId: string, produkId: string, field: keyof ProdukJenisDetailField, value: any) => {
+    setDetails(prev => prev.map(d => 
+      d.id === detailId 
+        ? { 
+            ...d, 
+            jenisDetails: d.jenisDetails.map(j => 
+              j.id === jenisId 
+                ? { 
+                    ...j, 
+                    produkJenisDetails: j.produkJenisDetails.map(p => 
+                      p.id === produkId ? { ...p, [field]: value } as ProdukJenisDetailField : p
+                    )
+                  }
+                : j
+            )
+          }
+        : d
+    ))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,7 +191,42 @@ export default function NewKnowledgePage() {
             if (j > 0) fd.append(`detailLogo_${idx}_${j - 1}`, f)
           })
         }
-        return { index: idx, name: d.name, description: d.description || '' }
+
+        // Handle jenis details
+        const jenisDetails = d.jenisDetails.map((j, jenisIdx) => {
+          const jenisLogoFiles = (j as any).logoFiles as File[] | undefined
+          if (jenisLogoFiles && jenisLogoFiles.length) {
+            fd.append(`jenisLogo_${idx}_${jenisIdx}`, jenisLogoFiles[0])
+            jenisLogoFiles.forEach((f, k) => {
+              if (k > 0) fd.append(`jenisLogo_${idx}_${jenisIdx}_${k - 1}`, f)
+            })
+          }
+
+          // Handle produk jenis details
+          const produkDetails = j.produkJenisDetails.map((p, produkIdx) => {
+            const produkLogoFiles = (p as any).logoFiles as File[] | undefined
+            if (produkLogoFiles && produkLogoFiles.length) {
+              fd.append(`produkLogo_${idx}_${jenisIdx}_${produkIdx}`, produkLogoFiles[0])
+              produkLogoFiles.forEach((f, k) => {
+                if (k > 0) fd.append(`produkLogo_${idx}_${jenisIdx}_${produkIdx}_${k - 1}`, f)
+              })
+            }
+            return { name: p.name, description: p.description || '' }
+          })
+
+          return {
+            name: j.name,
+            description: j.description || '',
+            produkJenisDetails: produkDetails
+          }
+        })
+
+        return { 
+          index: idx, 
+          name: d.name, 
+          description: d.description || '',
+          jenisDetails
+        }
       })
       fd.append('details', JSON.stringify(minimalDetails))
 
@@ -160,9 +304,30 @@ export default function NewKnowledgePage() {
               {logoFiles.length > 0 && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg grid grid-cols-2 md:grid-cols-3 gap-3">
                   {logoFiles.map((f, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <img src={URL.createObjectURL(f)} alt="Preview" className="w-full h-auto object-contain rounded border" />
-                      <div className="text-xs text-gray-600">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
+                    <div
+                      key={idx}
+                      className="relative group rounded border bg-white"
+                      style={{
+                        backgroundImage: `url(${URL.createObjectURL(f)})`,
+                        backgroundSize: 'contain',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        aspectRatio: '16/9',
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                        <button
+                          type="button"
+                          aria-label="Hapus gambar"
+                          onClick={() => setLogoFiles(prev => prev.filter((_, i) => i !== idx))}
+                          className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/70 px-1 rounded">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
                     </div>
                   ))}
                   <div className="col-span-full flex justify-end">
@@ -214,9 +379,30 @@ export default function NewKnowledgePage() {
                     {(d as any).logoFiles?.length ? (
                       <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
                         {(d as any).logoFiles.map((f: File, idx: number) => (
-                          <div key={idx} className="space-y-2">
-                            <img src={URL.createObjectURL(f)} alt="Preview" className="w-full h-auto object-contain rounded border" />
-                            <div className="text-xs text-gray-600">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                          <div
+                            key={idx}
+                            className="relative group rounded border bg-white"
+                            style={{
+                              backgroundImage: `url(${URL.createObjectURL(f)})`,
+                              backgroundSize: 'contain',
+                              backgroundPosition: 'center',
+                              backgroundRepeat: 'no-repeat',
+                              aspectRatio: '16/9',
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                              <button
+                                type="button"
+                                aria-label="Hapus gambar"
+                                onClick={() => updateDetail(d.id, 'logoFiles', (d as any).logoFiles.filter((_: File, i: number) => i !== idx))}
+                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
                           </div>
                         ))}
                         <div className="col-span-full flex justify-end">
@@ -224,6 +410,158 @@ export default function NewKnowledgePage() {
                         </div>
                       </div>
                     ) : null}
+                  </div>
+
+                  {/* Jenis Details Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-700">Jenis Detail</h4>
+                      <Button type="button" variant="outline" size="sm" className="text-[#03438f] border-[#03438f]" onClick={() => addJenisDetail(d.id)}>
+                        <Plus className="h-3 w-3 mr-1" /> Tambah Jenis
+                      </Button>
+                    </div>
+                    {d.jenisDetails.length === 0 && (
+                      <p className="text-xs text-gray-500">Belum ada jenis detail. Klik "Tambah Jenis" untuk menambahkan (opsional).</p>
+                    )}
+                    <div className="space-y-3">
+                      {d.jenisDetails.map((j, jenisIdx) => (
+                        <div key={j.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-medium text-gray-600">Jenis {jenisIdx + 1}</h5>
+                            <Button type="button" variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => removeJenisDetail(d.id, j.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs font-medium text-gray-600">Nama Jenis</Label>
+                              <Input value={j.name} onChange={(e) => updateJenisDetail(d.id, j.id, 'name', e.target.value)} placeholder="Nama jenis detail" className="text-sm" />
+                            </div>
+                            <div>
+                              <Label className="text-xs font-medium text-gray-600">Logo Jenis</Label>
+                              <div className="relative">
+                                <input id={`jenis-logo-${j.id}`} type="file" multiple accept="image/*" onChange={(e) => updateJenisDetail(d.id, j.id, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
+                                <label htmlFor={`jenis-logo-${j.id}`} className="flex items-center justify-center w-full px-3 py-4 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
+                                  <Upload className="h-3 w-3 text-gray-400 mr-2" />
+                                  <span className="text-xs text-gray-600">{(j as any).logoFiles?.length ? `${(j as any).logoFiles.length} file` : 'Upload logo'}</span>
+                                </label>
+                              </div>
+                            </div>
+                            {(j as any).logoFiles?.length ? (
+                              <div className="md:col-span-2 mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {(j as any).logoFiles.map((f: File, jIdx: number) => (
+                                  <div
+                                    key={jIdx}
+                                    className="relative group rounded border bg-white"
+                                    style={{
+                                      backgroundImage: `url(${URL.createObjectURL(f)})`,
+                                      backgroundSize: 'contain',
+                                      backgroundPosition: 'center',
+                                      backgroundRepeat: 'no-repeat',
+                                      aspectRatio: '16/9',
+                                    }}
+                                  >
+                                    <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                                      <button
+                                        type="button"
+                                        aria-label="Hapus gambar"
+                                        onClick={() => updateJenisDetail(d.id, j.id, 'logoFiles', (j as any).logoFiles.filter((_: File, i: number) => i !== jIdx))}
+                                        className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                    <div className="text-xs text-gray-600 mt-1">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-gray-600">Deskripsi Jenis</Label>
+                            <textarea value={j.description} onChange={(e) => updateJenisDetail(d.id, j.id, 'description', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#03438f] focus:border-transparent resize-none text-sm" placeholder="Deskripsi jenis detail"></textarea>
+                          </div>
+
+                          {/* Produk Jenis Details Section */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h6 className="text-xs font-medium text-gray-600">Produk Jenis Detail</h6>
+                              <Button type="button" variant="outline" size="sm" className="text-[#03438f] border-[#03438f]" onClick={() => addProdukJenisDetail(d.id, j.id)}>
+                                <Plus className="h-3 w-3 mr-1" /> Tambah Produk
+                              </Button>
+                            </div>
+                            {j.produkJenisDetails.length === 0 && (
+                              <p className="text-xs text-gray-500">Belum ada produk jenis detail. Klik "Tambah Produk" untuk menambahkan (opsional).</p>
+                            )}
+                            <div className="space-y-2">
+                              {j.produkJenisDetails.map((p, produkIdx) => (
+                                <div key={p.id} className="bg-white border border-gray-200 rounded p-3 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-600">Produk {produkIdx + 1}</span>
+                                    <Button type="button" variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => removeProdukJenisDetail(d.id, j.id, p.id)}>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-600">Nama Produk</Label>
+                                      <Input value={p.name} onChange={(e) => updateProdukJenisDetail(d.id, j.id, p.id, 'name', e.target.value)} placeholder="Nama produk" className="text-xs" />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs font-medium text-gray-600">Logo Produk</Label>
+                                      <div className="relative">
+                                        <input id={`produk-logo-${p.id}`} type="file" multiple accept="image/*" onChange={(e) => updateProdukJenisDetail(d.id, j.id, p.id, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
+                                        <label htmlFor={`produk-logo-${p.id}`} className="flex items-center justify-center w-full px-2 py-3 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
+                                          <Upload className="h-3 w-3 text-gray-400 mr-1" />
+                                          <span className="text-xs text-gray-600">{(p as any).logoFiles?.length ? `${(p as any).logoFiles.length} file` : 'Upload'}</span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                    {(p as any).logoFiles?.length ? (
+                                      <div className="md:col-span-2 mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {(p as any).logoFiles.map((f: File, pIdx: number) => (
+                                          <div
+                                            key={pIdx}
+                                            className="relative group rounded border bg-white"
+                                            style={{
+                                              backgroundImage: `url(${URL.createObjectURL(f)})`,
+                                              backgroundSize: 'contain',
+                                              backgroundPosition: 'center',
+                                              backgroundRepeat: 'no-repeat',
+                                              aspectRatio: '16/9',
+                                            }}
+                                          >
+                                            <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
+                                              <button
+                                                type="button"
+                                                aria-label="Hapus gambar"
+                                                onClick={() => updateProdukJenisDetail(d.id, j.id, p.id, 'logoFiles', (p as any).logoFiles.filter((_: File, i: number) => i !== pIdx))}
+                                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
+                                              >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                              </button>
+                                            </div>
+                                            <div className="text-xs text-gray-600 mt-1">{((f.size || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs font-medium text-gray-600">Deskripsi Produk</Label>
+                                    <textarea value={p.description} onChange={(e) => updateProdukJenisDetail(d.id, j.id, p.id, 'description', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#03438f] focus:border-transparent resize-none text-xs" placeholder="Deskripsi produk"></textarea>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
