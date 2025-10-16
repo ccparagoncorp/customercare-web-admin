@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient, UserRole } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const session = await getServerSession(authOptions)
     
-    if (!session) {
+    if (!session || !(session as any).user) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin or super admin
-    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
+    if (((session as any).user as any)?.role !== 'SUPER_ADMIN' && ((session as any).user as any)?.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Forbidden: Admin access required' },
         { status: 403 }
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
     // Check authentication
     const session = await getServerSession(authOptions)
     
-    if (!session) {
+    if (!session || !(session as any).user) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin or super admin
-    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
+    if (((session as any).user as any)?.role !== 'SUPER_ADMIN' && ((session as any).user as any)?.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Forbidden: Admin access required' },
         { status: 403 }
@@ -193,23 +193,35 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
 
-    // Build where clause
+    // Build where clause with optimized search
     const where: any = {}
 
     if (search) {
+      // Use startsWith for better performance on indexed fields
+      const searchLower = search.toLowerCase()
       where.OR = [
+        { name: { startsWith: search, mode: 'insensitive' } },
+        { email: { startsWith: search, mode: 'insensitive' } },
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } }
       ]
     }
 
-    // Get agents with pagination
+    // Get agents with pagination and optimized query
     const [agents, total] = await Promise.all([
       prisma.agent.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          category: true,
+          isActive: true,
+          createdAt: true
+        }
       }),
       prisma.agent.count({ where })
     ])
@@ -236,27 +248,27 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session || (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN')) {
-    return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 403 }
-    )
-  }
-
-  const { searchParams } = new URL(request.url)
-  const agentId = searchParams.get('id')
-
-  if (!agentId) {
-    return NextResponse.json(
-      { message: 'Agent ID is required' },
-      { status: 400 }
-    )
-  }
-
+export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+
+    if (!session || ((session as any).user as any)?.role !== 'SUPER_ADMIN' && ((session as any).user as any)?.role !== 'ADMIN') {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const agentId = searchParams.get('id')
+
+    if (!agentId) {
+      return NextResponse.json(
+        { message: 'Agent ID is required' },
+        { status: 400 }
+      )
+    }
+
     // Check if agent exists in database
     const existingAgent = await prisma.agent.findUnique({
       where: { id: agentId }
@@ -269,8 +281,6 @@ export async function DELETE(request: Request) {
       )
     }
 
-    console.log('Deleting agent:', existingAgent.email)
-
     // Delete user from Supabase Auth
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(agentId)
 
@@ -282,14 +292,10 @@ export async function DELETE(request: Request) {
       )
     }
 
-    console.log('✅ User deleted from Supabase Auth')
-
     // Delete agent from database
     await prisma.agent.delete({
       where: { id: agentId }
     })
-
-    console.log('✅ Agent deleted from database')
 
     return NextResponse.json(
       { message: 'Agent deleted successfully' },
@@ -302,5 +308,7 @@ export async function DELETE(request: Request) {
       { message: 'Internal server error' },
       { status: 500 }
     )
+  } finally {
+    await prisma.$disconnect()
   }
 }

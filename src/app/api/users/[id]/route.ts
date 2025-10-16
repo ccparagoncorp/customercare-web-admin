@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
@@ -14,7 +14,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN')) {
+    if (!session || ((session as any).user as any).role !== 'SUPER_ADMIN' && ((session as any).user as any).role !== 'ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -50,7 +50,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
+    if (!session || ((session as any).user as any).role !== 'SUPER_ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -115,7 +115,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
+    if (!session || ((session as any).user as any).role !== 'SUPER_ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 

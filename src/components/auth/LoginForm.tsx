@@ -7,7 +7,7 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Eye, EyeOff, Lock, User, Key, ArrowRight } from "lucide-react"
+import { Loader2, Lock, User, Key, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import authContent from "@/content/auth.json"
@@ -23,10 +23,9 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
-  const router = useRouter()
 
   const {
     register,
@@ -122,8 +121,19 @@ export function LoginForm() {
               {...register("password")}
               placeholder={login.form.passwordPlaceholder}
               disabled={isLoading}
-              className="pl-10 pr-2 h-11 rounded-lg border-gray-300 focus:border-[#03438f] focus:ring-[#03438f] bg-white/80 backdrop-blur-sm"
+              className="pl-10 pr-10 h-11 rounded-lg border-gray-300 focus:border-[#03438f] focus:ring-[#03438f] bg-white/80 backdrop-blur-sm"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+              ) : (
+                <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+              )}
+            </button>
           </div>
           {errors.password && (
             <p className="text-sm text-red-600">{errors.password.message}</p>

@@ -1,0 +1,62 @@
+{
+  "title": "Knowledge Base",
+  "description": "Kelola pengetahuan dan informasi untuk customer care",
+  "stats": {
+    "totalKnowledge": "Total Knowledge",
+    "totalDetails": "Total Detail",
+    "totalItems": "Total Item"
+  },
+  "table": {
+    "headers": {
+      "title": "Judul",
+      "description": "Deskripsi",
+      "details": "Detail",
+      "actions": "Aksi"
+    },
+    "empty": {
+      "title": "Belum ada knowledge",
+      "description": "Mulai tambahkan knowledge untuk membantu customer care",
+      "button": "Tambah Knowledge"
+    }
+  },
+  "addButton": "Tambah Knowledge",
+  "searchPlaceholder": "Cari knowledge...",
+  "form": {
+    "title": "Tambah Knowledge Baru",
+    "subtitle": "Tambahkan informasi yang berguna untuk customer care",
+    "fields": {
+      "title": {
+        "label": "Nama Knowledge",
+        "placeholder": "Masukkan nama knowledge"
+      },
+      "description": {
+        "label": "Deskripsi Knowledge",
+        "placeholder": "Masukkan deskripsi lengkap knowledge. Anda bisa menggunakan enter untuk baris baru dan paste teks panjang di sini..."
+      },
+      "logo": {
+        "label": "Logo Knowledge",
+        "placeholder": "Pilih file logo"
+      }
+    },
+    "detailFields": {
+      "name": {
+        "label": "Nama Detail Knowledge",
+        "placeholder": "Masukkan nama detail knowledge"
+      },
+      "description": {
+        "label": "Deskripsi Detail Knowledge",
+        "placeholder": "Masukkan deskripsi detail knowledge. Anda bisa menggunakan enter untuk baris baru dan paste teks panjang di sini..."
+      },
+      "logo": {
+        "label": "Logo Detail Knowledge",
+        "placeholder": "Pilih file logo detail"
+      }
+    },
+    "buttons": {
+      "cancel": "Batal",
+      "submit": "Tambah Knowledge",
+      "submitting": "Menambahkan...",
+      "addDetail": "Tambah Detail Knowledge"
+    }
+  }
+}

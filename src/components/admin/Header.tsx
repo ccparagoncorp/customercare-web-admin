@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { Search, Bell, Settings, User, LogOut } from "lucide-react"
+import { Search, Bell, Settings, User } from "lucide-react"
 import navigationContent from "@/content/navigation.json"
 
 export function Header() {
@@ -9,7 +9,8 @@ export function Header() {
   const { header } = navigationContent
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 h-12 flex items-center justify-between px-4">
+    <header className="absolute top-0 left-0 right-0 z-30 bg-white shadow-sm border-b border-gray-200 h-12 flex items-center justify-between px-4">
+      <div></div>
       {/* Left side - Search */}
       <div className="flex-1 max-w-sm">
         <div className="relative">
@@ -46,7 +47,7 @@ export function Header() {
                 {session?.user?.name || "Admin"}
               </p>
               <p className="text-xs text-gray-500">
-                {session?.user?.role || "SUPER_ADMIN"}
+                {(session?.user as any)?.role || "SUPER_ADMIN"}
               </p>
             </div>
           </div>

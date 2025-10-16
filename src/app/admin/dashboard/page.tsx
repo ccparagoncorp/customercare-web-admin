@@ -19,7 +19,7 @@ export default function AdminDashboard() {
       return
     }
 
-    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
+    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
       router.push('/login')
       return
     }

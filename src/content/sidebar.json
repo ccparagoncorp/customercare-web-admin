@@ -2,17 +2,11 @@
   "admin": {
     "dashboard": {
       "label": "Dasbor",
-      "icon": {
-        "active": "/sidebar/dashboard-active.png",
-        "inactive": "/sidebar/dashboard-inactive.png"
-      }
+      "icon": "lucide"
     },
     "manageAgents": {
       "label": "Kelola Agent",
-      "icon": {
-        "active": "/sidebar/agents-active.png",
-        "inactive": "/sidebar/agents-inactive.png"
-      }
+      "icon": "lucide"
     },
     "manageKnowledge": {
       "label": "Kelola Knowledge",
@@ -24,7 +18,7 @@
     "manageProducts": {
       "label": "Kelola Produk",
       "icon": {
-        "active": "/sidebar/produck-active.png",
+        "active": "/sidebar/produk-active.png",
         "inactive": "/sidebar/produk-inactive.png"
       }
     },
@@ -36,8 +30,7 @@
       }
     },
     "logout": {
-      "label": "Keluar",
-      "icon": "/sidebar/logout.png"
+      "label": "Keluar"
     }
   }
 }

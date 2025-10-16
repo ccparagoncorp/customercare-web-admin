@@ -4,32 +4,32 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
-import { AgentsTable } from "@/components/admin/agent/AgentsTable"
-import { Users, UserCheck, Clock } from "lucide-react"
-import agentsContent from "@/content/agents.json"
+import { KnowledgeTable } from "@/components/admin/knowledge/KnowledgeTable"
+import { BookOpen, Tag, FileText } from "lucide-react"
+import knowledgeContent from "@/content/knowledge.json"
 
-export default function AgentsPage() {
+export default function KnowledgePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [statsData, setStatsData] = useState([
     {
-      title: agentsContent.stats.totalAgents,
+      title: knowledgeContent.stats.totalKnowledge,
       value: "0",
-      icon: Users,
+      icon: BookOpen,
       change: "+0",
       changeType: "positive"
     },
     {
-      title: agentsContent.stats.totalSocMed,
+      title: knowledgeContent.stats.totalDetails,
       value: "0",
-      icon: UserCheck,
+      icon: Tag,
       change: "+0",
       changeType: "positive"
     },
     {
-      title: agentsContent.stats.totalECom,
+      title: knowledgeContent.stats.totalItems,
       value: "0",
-      icon: Clock,
+      icon: FileText,
       change: "0",
       changeType: "positive"
     }
@@ -53,34 +53,33 @@ export default function AgentsPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/agents')
+        const response = await fetch('/api/knowledge')
         if (response.ok) {
           const data = await response.json()
-          const agents = data.users || []
-          
-          const totalAgents = agents.length
-          const totalSocMed = agents.filter((agent: { category: string }) => agent.category === 'socialMedia').length
-          const totalECom = agents.filter((agent: { category: string }) => agent.category === 'eCommerce').length
+          const knowledge = data.knowledge || []
+          const totalKnowledge = knowledge.length
+          const totalDetails = knowledge.reduce((sum: number, item: { detailKnowledges?: any[] }) => sum + (item.detailKnowledges?.length || 0), 0)
+          const totalItems = totalKnowledge + totalDetails
           
           setStatsData([
             {
-              title: agentsContent.stats.totalAgents,
-              value: totalAgents.toString(),
-              icon: Users,
+              title: knowledgeContent.stats.totalKnowledge,
+              value: totalKnowledge.toString(),
+              icon: BookOpen,
               change: "+0",
               changeType: "positive"
             },
             {
-              title: agentsContent.stats.totalSocMed,
-              value: totalSocMed.toString(),
-              icon: UserCheck,
+              title: knowledgeContent.stats.totalDetails,
+              value: totalDetails.toString(),
+              icon: Tag,
               change: "+0",
               changeType: "positive"
             },
             {
-              title: agentsContent.stats.totalECom,
-              value: totalECom.toString(),
-              icon: Clock,
+              title: knowledgeContent.stats.totalItems,
+              value: totalItems.toString(),
+              icon: FileText,
               change: "0",
               changeType: "positive"
             }
@@ -115,12 +114,12 @@ export default function AgentsPage() {
         <div className="bg-gradient-to-r from-[#03438f] to-[#012f65] rounded-2xl p-8 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">{agentsContent.title}</h1>
-              <p className="text-blue-100 text-lg">{agentsContent.description}</p>
+              <h1 className="text-3xl font-bold mb-2">{knowledgeContent.title}</h1>
+              <p className="text-blue-100 text-lg">{knowledgeContent.description}</p>
             </div>
             <div className="hidden md:block">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                <Users className="w-8 h-8" />
+                <BookOpen className="w-8 h-8" />
               </div>
             </div>
           </div>
@@ -154,8 +153,8 @@ export default function AgentsPage() {
           })}
         </div>
 
-        {/* Agents Table */}
-        <AgentsTable />
+        {/* Knowledge Table */}
+        <KnowledgeTable />
       </div>
     </AdminLayout>
   )

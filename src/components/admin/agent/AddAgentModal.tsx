@@ -10,7 +10,7 @@ import agentsContent from "@/content/agents.json"
 interface AddAgentModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (newAgent?: any) => void
 }
 
 export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps) {
@@ -82,17 +82,12 @@ export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps
         throw new Error(errorData.message || 'Gagal menambah agent')
       }
 
+      const result = await response.json()
+      
       // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        category: "socialMedia"
-      })
-      setErrors({})
+      resetForm()
 
-      onSuccess()
+      onSuccess(result.agent)
       onClose()
       
     } catch (error) {
@@ -109,6 +104,19 @@ export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      category: "socialMedia"
+    })
+    setErrors({})
+    setShowPassword(false)
+    setShowConfirmPassword(false)
   }
 
   if (!isOpen) return null

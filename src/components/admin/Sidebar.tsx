@@ -54,37 +54,37 @@ export function Sidebar() {
 
   return (
     <div 
-      className={`bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-200 transition-all duration-300 ${isHovered ? 'w-64' : 'w-16'} h-screen flex flex-col`}
+      className={`absolute top-0 z-50 bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-200 transition-all duration-300 ${isHovered ? 'w-64' : 'w-16'} h-screen flex flex-col`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
       <div className="border-b border-gray-200 bg-white px-4 py-3">
-        <div className="flex items-center justify-center">
-          {isHovered ? (
-            <Image
-              src="/logo.png"
-              alt="Logo"
-              width={108}
-              height={108}
-              className="rounded-lg"
-            />
-          ) : (
+        <div className="flex items-center justify-center overflow-hidden">
+          <div className="relative flex items-center justify-center" style={{ width: '108px', height: '32px' }}>
             <Image
               src="/logomini.png"
               alt="Logo"
               width={32}
               height={32}
-              className="rounded-lg"
+              className="absolute rounded-lg transition-opacity duration-300"
+              style={{ opacity: isHovered ? 0 : 1 }}
             />
-          )}
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={108}
+              height={32}
+              className="absolute rounded-lg transition-opacity duration-300"
+              style={{ opacity: isHovered ? 1 : 0 }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Navigation Menu */}
       <nav className="flex-1 space-y-2 p-2">
         {menuItems.map((item) => {
-          const IconComponent = item.iconComponent
           return (
             <Link
               key={item.href}
@@ -99,8 +99,8 @@ export function Sidebar() {
                 <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
               )}
               <div className="mr-3 flex-shrink-0">
-                {item.icon === "lucide" && IconComponent ? (
-                  <IconComponent className={`h-4 w-4 ${item.active ? 'text-white' : 'text-[#03438f] group-hover:text-[#03438f]'}`} />
+                {item.icon === "lucide" && item.iconComponent ? (
+                  <item.iconComponent className={`h-4 w-4 ${item.active ? 'text-white' : 'text-[#03438f] group-hover:text-[#03438f]'}`} />
                 ) : (
                   <Image
                     src={item.active ? (item.icon as any).active : (item.icon as any).inactive}
@@ -111,15 +111,17 @@ export function Sidebar() {
                   />
                 )}
               </div>
-              {isHovered && (
-                <>
-                  <span className="text-sm font-medium">{item.name}</span>
-                  {item.active && (
-                    <div className="ml-auto">
-                      <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
-                    </div>
-                  )}
-                </>
+              <span 
+                className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+                  isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+                }`}
+              >
+                {item.name}
+              </span>
+              {item.active && isHovered && (
+                <div className="ml-auto flex-shrink-0">
+                  <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                </div>
               )}
             </Link>
           )
@@ -133,17 +135,17 @@ export function Sidebar() {
           className="w-full flex items-center rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group px-4 py-3"
         >
           <div className="mr-3 flex-shrink-0">
-            <Image
-              src={admin.logout.icon}
-              alt={admin.logout.label}
-              width={16}
-              height={16}
-              className="transition-opacity duration-200"
-            />
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
           </div>
-          {isHovered && (
-            <span className="text-sm font-medium">{admin.logout.label}</span>
-          )}
+          <span 
+            className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+              isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'
+            }`}
+          >
+            {admin.logout.label}
+          </span>
         </button>
       </div>
     </div>
