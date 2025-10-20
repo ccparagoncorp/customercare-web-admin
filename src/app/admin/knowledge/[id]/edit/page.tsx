@@ -326,7 +326,7 @@ export default function EditKnowledgePage() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Diupdate oleh *</Label>
-                <Input value={updatedBy} onChange={(e) => setUpdatedBy(e.target.value)} placeholder="Nama admin yang mengedit" />
+                <Input value={updatedBy} onChange={(e) => setUpdatedBy(e.target.value)} placeholder="Nama admin yang mengedit" required />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Catatan Update</Label>

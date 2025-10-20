@@ -69,6 +69,20 @@ export function KnowledgeTable() {
     }
   }, [pagination.page, pagination.limit, debouncedSearchTerm])
 
+  // Client-side filtering for better search experience
+  const filteredKnowledge = knowledge.filter((item) => {
+    if (!debouncedSearchTerm.trim()) return true
+    const searchLower = debouncedSearchTerm.toLowerCase()
+    return (
+      item.title.toLowerCase().includes(searchLower) ||
+      (item.description && item.description.toLowerCase().includes(searchLower)) ||
+      item.detailKnowledges.some(detail => 
+        detail.name.toLowerCase().includes(searchLower) ||
+        (detail.description && detail.description.toLowerCase().includes(searchLower))
+      )
+    )
+  })
+
   // Debounce search term - only search after user stops typing for 1 second
   useEffect(() => {
     if (searchTerm !== debouncedSearchTerm) {
@@ -99,10 +113,6 @@ export function KnowledgeTable() {
     }
   }
 
-  const handleManualSearch = () => {
-    setDebouncedSearchTerm(searchTerm)
-    setSearching(false)
-  }
 
   const handleClearSearch = () => {
     setSearchTerm("")
@@ -154,34 +164,23 @@ export function KnowledgeTable() {
       <div className="p-6 border-b border-gray-100">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-1 max-w-sm">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder={searchPlaceholder}
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="pl-10 pr-10"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={handleClearSearch}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              <Button
-                onClick={handleManualSearch}
-                variant="outline"
-                size="sm"
-                className="px-4"
-              >
-                <Search className="h-4 w-4 mr-1" />
-                Cari
-              </Button>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="pl-10 pr-10"
+              />
+              {searchTerm && (
+                <button
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
           
@@ -197,11 +196,11 @@ export function KnowledgeTable() {
 
       {/* Table */}
       <div className="overflow-x-auto">
-        {loading && !knowledge.length ? (
+        {loading && !filteredKnowledge.length ? (
           <div className="flex items-center justify-center py-12">
             <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
           </div>
-        ) : knowledge.length === 0 ? (
+        ) : filteredKnowledge.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <BookOpen className="h-8 w-8 text-gray-400" />
@@ -247,7 +246,7 @@ export function KnowledgeTable() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {knowledge.map((item) => (
+                {filteredKnowledge.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
@@ -322,7 +321,8 @@ export function KnowledgeTable() {
         <div className="px-6 py-3 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Menampilkan {((pagination.page - 1) * pagination.limit) + 1} sampai {Math.min(pagination.page * pagination.limit, pagination.total)} dari {pagination.total} knowledge
+              Menampilkan {((pagination.page - 1) * pagination.limit) + 1} sampai {Math.min(pagination.page * pagination.limit, filteredKnowledge.length)} dari {filteredKnowledge.length} knowledge
+              {debouncedSearchTerm && ` (dari ${pagination.total} total)`}
             </div>
             <div className="flex space-x-2">
               <Button

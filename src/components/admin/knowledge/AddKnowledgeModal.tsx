@@ -402,6 +402,7 @@ export function AddKnowledgeModal({ isOpen, onClose, onSuccess }: AddKnowledgeMo
               value={formData.createdBy}
               onChange={(e) => handleInputChange('createdBy', e.target.value)}
               placeholder="Nama admin pembuat"
+              required
               className={errors.createdBy ? 'border-red-500 focus:border-red-500' : ''}
             />
             {errors.createdBy && (

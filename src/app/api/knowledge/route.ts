@@ -519,6 +519,39 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: 'Knowledge not found' }, { status: 404 })
     }
 
+    // Get existing knowledge data to preserve existing logos
+    const existingKnowledge = await withRetry(async () => {
+      const prisma = createPrismaClient()
+      try {
+        return await prisma.knowledge.findUnique({
+          where: { id },
+          select: {
+            logos: true,
+            detailKnowledges: {
+              select: {
+                id: true,
+                logos: true,
+                jenisDetailKnowledges: {
+                  select: {
+                    id: true,
+                    logos: true,
+                    produkJenisDetailKnowledges: {
+                      select: {
+                        id: true,
+                        logos: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        })
+      } finally {
+        await prisma.$disconnect()
+      }
+    })
+
     // Delete removed logos from storage
     for (const logoUrl of removedLogos) {
       await deleteFileServer(logoUrl)
@@ -544,6 +577,17 @@ export async function PUT(request: NextRequest) {
 
     let logoUrl: string | null | undefined = undefined
     const logosToSet: string[] = []
+    
+    // Preserve existing knowledge logos that are not being removed
+    if (existingKnowledge?.logos) {
+      const existingLogos = existingKnowledge.logos || []
+      for (const existingLogo of existingLogos) {
+        if (!removedLogos.includes(existingLogo)) {
+          logosToSet.push(existingLogo)
+        }
+      }
+    }
+    
     if (logoFile && logoFile.size > 0) {
       const uploadResult = await uploadFileServer(logoFile, 'knowledge')
       if (uploadResult.error || !uploadResult.url) return NextResponse.json({ message: 'Failed to upload logo' }, { status: 500 })
@@ -601,6 +645,20 @@ export async function PUT(request: NextRequest) {
         const file = formData.get(`detailLogo_${d.index}`) as File | null
         const logos: string[] = []
         
+        // Preserve existing logos that are not being removed
+        if (existingKnowledge?.detailKnowledges?.[d.index]?.logos) {
+          const existingLogos = existingKnowledge.detailKnowledges[d.index].logos || []
+          const removedForThisDetail = removedDetailLogos.find(removed => removed.detailId === existingKnowledge.detailKnowledges[d.index]?.id)
+          const logosToRemove = removedForThisDetail?.logos || []
+          
+          // Keep existing logos that are not in the removal list
+          for (const existingLogo of existingLogos) {
+            if (!logosToRemove.includes(existingLogo)) {
+              logos.push(existingLogo)
+            }
+          }
+        }
+        
         if (file && file.size > 0) {
           const up = await uploadFileServer(file, 'knowledge/detail')
           if (up.error) {
@@ -629,6 +687,20 @@ export async function PUT(request: NextRequest) {
           const jenisFile = formData.get(`jenisLogo_${d.index}_${jenisIdx}`) as File | null
           const jenisLogos: string[] = []
           
+          // Preserve existing jenis logos that are not being removed
+          if (existingKnowledge?.detailKnowledges?.[d.index]?.jenisDetailKnowledges?.[jenisIdx]?.logos) {
+            const existingJenisLogos = existingKnowledge.detailKnowledges[d.index].jenisDetailKnowledges[jenisIdx].logos || []
+            const removedForThisJenis = removedJenisLogos.find(removed => removed.jenisId === existingKnowledge.detailKnowledges[d.index]?.jenisDetailKnowledges[jenisIdx]?.id)
+            const jenisLogosToRemove = removedForThisJenis?.logos || []
+            
+            // Keep existing jenis logos that are not in the removal list
+            for (const existingJenisLogo of existingJenisLogos) {
+              if (!jenisLogosToRemove.includes(existingJenisLogo)) {
+                jenisLogos.push(existingJenisLogo)
+              }
+            }
+          }
+          
           if (jenisFile && jenisFile.size > 0) {
             const up = await uploadFileServer(jenisFile, 'knowledge/jenis')
             if (up.error) {
@@ -656,6 +728,20 @@ export async function PUT(request: NextRequest) {
             const produk = jenis.produkJenisDetails[produkIdx]
             const produkFile = formData.get(`produkLogo_${d.index}_${jenisIdx}_${produkIdx}`) as File | null
             const produkLogos: string[] = []
+            
+            // Preserve existing produk logos that are not being removed
+            if (existingKnowledge?.detailKnowledges?.[d.index]?.jenisDetailKnowledges?.[jenisIdx]?.produkJenisDetailKnowledges?.[produkIdx]?.logos) {
+              const existingProdukLogos = existingKnowledge.detailKnowledges[d.index].jenisDetailKnowledges[jenisIdx].produkJenisDetailKnowledges[produkIdx].logos || []
+              const removedForThisProduk = removedProdukLogos.find(removed => removed.produkId === existingKnowledge.detailKnowledges[d.index]?.jenisDetailKnowledges[jenisIdx]?.produkJenisDetailKnowledges[produkIdx]?.id)
+              const produkLogosToRemove = removedForThisProduk?.logos || []
+              
+              // Keep existing produk logos that are not in the removal list
+              for (const existingProdukLogo of existingProdukLogos) {
+                if (!produkLogosToRemove.includes(existingProdukLogo)) {
+                  produkLogos.push(existingProdukLogo)
+                }
+              }
+            }
             
             if (produkFile && produkFile.size > 0) {
               const up = await uploadFileServer(produkFile, 'knowledge/produk')
@@ -710,7 +796,7 @@ export async function PUT(request: NextRequest) {
             data: {
               ...(title ? { title: title.trim() } : {}),
               ...(description !== undefined ? { description } : {}),
-              ...(logosToSet.length ? { logos: { push: logosToSet } } : {}),
+              ...(logosToSet.length ? { logos: logosToSet } : {}),
               updatedBy,
               ...(updateNotes ? { updateNotes: updateNotes.trim() } : {}),
               detailKnowledges: {
@@ -749,7 +835,7 @@ export async function PUT(request: NextRequest) {
             data: {
               ...(title ? { title: title.trim() } : {}),
               ...(description !== undefined ? { description } : {}),
-              ...(logosToSet.length ? { logos: { push: logosToSet } } : {}),
+              ...(logosToSet.length ? { logos: logosToSet } : {}),
               updatedBy,
               ...(updateNotes ? { updateNotes: updateNotes.trim() } : {})
             }

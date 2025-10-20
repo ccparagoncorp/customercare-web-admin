@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { Search, Bell, Settings, User } from "lucide-react"
 import navigationContent from "@/content/navigation.json"
@@ -7,9 +8,32 @@ import navigationContent from "@/content/navigation.json"
 export function Header() {
   const { data: session } = useSession()
   const { header } = navigationContent
+  const [sidebarWidth, setSidebarWidth] = useState(64) // Default width when sidebar is collapsed
+
+  useEffect(() => {
+    const handleMouseEnter = () => setSidebarWidth(256) // 64 * 4 = 256px (w-64)
+    const handleMouseLeave = () => setSidebarWidth(64) // 16 * 4 = 64px (w-16)
+
+    // Add event listeners to sidebar
+    const sidebar = document.querySelector('[data-sidebar]')
+    if (sidebar) {
+      sidebar.addEventListener('mouseenter', handleMouseEnter)
+      sidebar.addEventListener('mouseleave', handleMouseLeave)
+    }
+
+    return () => {
+      if (sidebar) {
+        sidebar.removeEventListener('mouseenter', handleMouseEnter)
+        sidebar.removeEventListener('mouseleave', handleMouseLeave)
+      }
+    }
+  }, [])
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-30 bg-white shadow-sm border-b border-gray-200 h-12 flex items-center justify-between px-4">
+    <header 
+      className="fixed top-0 right-0 z-40 bg-white shadow-sm border-b border-gray-200 h-12 flex items-center justify-between px-4 transition-all duration-300"
+      style={{ left: `${sidebarWidth}px` }}
+    >
       <div></div>
       {/* Left side - Search */}
       <div className="flex-1 max-w-sm">
