@@ -4,6 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const bucketName = process.env.SUPABASE_BUCKET_NAME || 'knowledge'
+const productBucketName = process.env.PRODUCT_BUCKET_NAME || 'products'
 
 // Client-side supabase (anon)
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -172,5 +173,87 @@ export async function deleteFilesServer(pathsOrUrls: string[]): Promise<{ succes
   } catch (e) {
     console.error('Batch delete (server) unexpected error:', e)
     return { success: false, error: 'Failed to delete files (server)', deleted: 0 }
+  }
+}
+
+// Product-specific upload functions
+export async function uploadProductFile(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    // Use server-side upload to bypass RLS
+    return await uploadProductFileServer(file, path)
+  } catch (error) {
+    console.error('Product upload error:', error)
+    return { url: null, error: 'Failed to upload product file' }
+  }
+}
+
+// Server-only product upload
+export async function uploadProductFileServer(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 15)
+    const fileExtension = file.name.split('.').pop()
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`
+    const fullPath = `${path}/${fileName}`
+
+    const { error } = await retry(() => serverSupabase.storage
+      .from(productBucketName)
+      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 500)
+
+    if (error) {
+      console.error('Product upload (server) error:', error)
+      return { url: null, error: error.message }
+    }
+
+    const { data: urlData } = serverSupabase.storage
+      .from(productBucketName)
+      .getPublicUrl(fullPath)
+
+    return { url: urlData.publicUrl, error: null }
+  } catch (error) {
+    console.error('Product upload (server) error:', error)
+    return { url: null, error: 'Failed to upload product file (server)' }
+  }
+}
+
+// Product-specific delete functions
+export async function deleteProductFile(path: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const { error } = await supabase.storage
+      .from(productBucketName)
+      .remove([path])
+
+    if (error) {
+      console.error('Product delete error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, error: null }
+  } catch (error) {
+    console.error('Product delete error:', error)
+    return { success: false, error: 'Failed to delete product file' }
+  }
+}
+
+// Server-only product delete
+export async function deleteProductFileServer(pathOrUrl: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const path = pathOrUrl.startsWith('http') ? extractPathFromPublicUrl(pathOrUrl) : pathOrUrl
+    if (!path) {
+      return { success: false, error: 'Invalid product storage path or URL' }
+    }
+    const { error } = await serverSupabase.storage
+      .from(productBucketName)
+      .remove([path])
+    if (error) {
+      console.error('Product delete (server) error:', error)
+      return { success: false, error: error.message }
+    }
+    return { success: true, error: null }
+  } catch (e) {
+    console.error('Product delete (server) unexpected error:', e)
+    return { success: false, error: 'Failed to delete product file (server)' }
   }
 }

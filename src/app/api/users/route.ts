@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 // GET /api/users - Get all users
 export async function GET() {
@@ -15,7 +13,8 @@ export async function GET() {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const users = await prisma.user.findMany({
+    const prisma = createPrismaClient()
+    const users = await withRetry(() => prisma.user.findMany({
       select: {
         id: true,
         email: true,
@@ -28,7 +27,7 @@ export async function GET() {
       orderBy: {
         createdAt: 'desc'
       }
-    })
+    }))
 
     return NextResponse.json(users)
   } catch (error) {
@@ -52,10 +51,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 })
     }
 
+    const prisma = createPrismaClient()
+    
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await withRetry(() => prisma.user.findUnique({
       where: { email }
-    })
+    }))
 
     if (existingUser) {
       return NextResponse.json({ message: 'User already exists' }, { status: 400 })
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12)
 
     // Create user
-    const user = await prisma.user.create({
+    const user = await withRetry(() => prisma.user.create({
       data: {
         email,
         name,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
         isActive: true,
         createdAt: true
       }
-    })
+    }))
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {

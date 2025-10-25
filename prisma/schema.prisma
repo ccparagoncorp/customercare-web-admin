@@ -12,6 +12,10 @@ model Brand {
   id              String           @id @default(cuid())
   name            String           @unique
   description     String?
+  images          String[]
+  createdBy       String?
+  updatedBy       String?
+  updateNotes     String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   kategoriProduks KategoriProduk[]
@@ -23,7 +27,11 @@ model KategoriProduk {
   id                 String              @id @default(cuid())
   name               String
   description        String?
+  images             String[]
   brandId            String
+  createdBy             String?
+  updatedBy          String?
+  updateNotes        String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   brand              Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
@@ -36,7 +44,11 @@ model SubkategoriProduk {
   id               String         @id @default(cuid())
   name             String
   description      String?
+  images           String[]
   kategoriProdukId String
+  createdBy        String?
+  updatedBy        String?
+  updateNotes      String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   produks          Produk[]
@@ -52,7 +64,11 @@ model Produk {
   sku                 String?           @unique
   price               Decimal?          @db.Decimal(10, 2)
   stock               Int?              @default(0)
+  images              String[]
   subkategoriProdukId String
+  createdBy           String?
+  updatedBy           String?
+  updateNotes         String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   detailProduks       DetailProduk[]
@@ -65,6 +81,7 @@ model DetailProduk {
   id        String   @id @default(cuid())
   name      String
   value     String
+  images     String[]
   produkId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient, UserRole } from '@prisma/client'
+import { UserRole } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
+import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 // Supabase client for auth operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -66,10 +65,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const prisma = createPrismaClient()
+    
     // Check if agent already exists in database
-    const existingAgent = await prisma.agent.findUnique({
+    const existingAgent = await withRetry(() => prisma.agent.findUnique({
       where: { email: email.toLowerCase().trim() }
-    })
+    }))
 
     if (existingAgent) {
       return NextResponse.json(
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12)
 
     // Create agent profile in database
-    const newAgent = await prisma.agent.create({
+    const newAgent = await withRetry(() => prisma.agent.create({
       data: {
         id: authData.user.id, // Use Supabase Auth user ID
         name: name.trim(),
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
         category: category,
         isActive: true
       }
-    })
+    }))
 
     // Return success response
     return NextResponse.json(
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    // Prisma client is automatically managed by createPrismaClient
   }
 }
 
@@ -207,9 +208,11 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    const prisma = createPrismaClient()
+    
     // Get agents with pagination and optimized query
     const [agents, total] = await Promise.all([
-      prisma.agent.findMany({
+      withRetry(() => prisma.agent.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
@@ -222,8 +225,8 @@ export async function GET(request: NextRequest) {
           isActive: true,
           createdAt: true
         }
-      }),
-      prisma.agent.count({ where })
+      })),
+      withRetry(() => prisma.agent.count({ where }))
     ])
 
     // Return agents
@@ -244,7 +247,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    // Prisma client is automatically managed by createPrismaClient
   }
 }
 
@@ -269,10 +272,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    const prisma = createPrismaClient()
+    
     // Check if agent exists in database
-    const existingAgent = await prisma.agent.findUnique({
+    const existingAgent = await withRetry(() => prisma.agent.findUnique({
       where: { id: agentId }
-    })
+    }))
 
     if (!existingAgent) {
       return NextResponse.json(
@@ -293,9 +298,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete agent from database
-    await prisma.agent.delete({
+    await withRetry(() => prisma.agent.delete({
       where: { id: agentId }
-    })
+    }))
 
     return NextResponse.json(
       { message: 'Agent deleted successfully' },
@@ -309,6 +314,6 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    // Prisma client is automatically managed by createPrismaClient
   }
 }

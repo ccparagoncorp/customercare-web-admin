@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 // GET /api/users/[id] - Get user by ID
 export async function GET(
@@ -18,7 +16,8 @@ export async function GET(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
+    const prisma = createPrismaClient()
+    const user = await withRetry(() => prisma.user.findUnique({
       where: { id: params.id },
       select: {
         id: true,
@@ -29,7 +28,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true
       }
-    })
+    }))
 
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
@@ -56,10 +55,12 @@ export async function PUT(
 
     const { email, name, password, role, isActive } = await request.json()
 
+    const prisma = createPrismaClient()
+    
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await withRetry(() => prisma.user.findUnique({
       where: { id: params.id }
-    })
+    }))
 
     if (!existingUser) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
@@ -67,9 +68,9 @@ export async function PUT(
 
     // Check if email is being changed and if it's already taken
     if (email && email !== existingUser.email) {
-      const emailTaken = await prisma.user.findUnique({
+      const emailTaken = await withRetry(() => prisma.user.findUnique({
         where: { email }
-      })
+      }))
 
       if (emailTaken) {
         return NextResponse.json({ message: 'Email already taken' }, { status: 400 })
@@ -86,7 +87,7 @@ export async function PUT(
       updateData.password = await bcrypt.hash(password, 12)
     }
 
-    const user = await prisma.user.update({
+    const user = await withRetry(() => prisma.user.update({
       where: { id: params.id },
       data: updateData,
       select: {
@@ -98,7 +99,7 @@ export async function PUT(
         createdAt: true,
         updatedAt: true
       }
-    })
+    }))
 
     return NextResponse.json(user)
   } catch (error) {
@@ -119,10 +120,12 @@ export async function DELETE(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const prisma = createPrismaClient()
+    
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await withRetry(() => prisma.user.findUnique({
       where: { id: params.id }
-    })
+    }))
 
     if (!existingUser) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
@@ -133,9 +136,9 @@ export async function DELETE(
       return NextResponse.json({ message: 'Cannot delete super admin' }, { status: 400 })
     }
 
-    await prisma.user.delete({
+    await withRetry(() => prisma.user.delete({
       where: { id: params.id }
-    })
+    }))
 
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {

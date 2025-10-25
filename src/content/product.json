@@ -1,0 +1,209 @@
+{
+  "title": "Kelola Produk",
+  "sections": {
+    "brand": {
+      "title": "Manajemen Brand",
+      "description": "Kelola data brand produk",
+      "table": {
+        "headers": {
+          "name": "Nama Brand",
+          "description": "Deskripsi",
+          "images": "Gambar",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "createdBy": "Dibuat oleh",
+          "updatedBy": "Diupdate oleh",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data brand"
+      },
+      "form": {
+        "title": {
+          "add": "Tambah Brand",
+          "edit": "Edit Brand"
+        },
+        "fields": {
+          "name": {
+            "label": "Nama Brand",
+            "placeholder": "Masukkan nama brand"
+          },
+          "description": {
+            "label": "Deskripsi",
+            "placeholder": "Masukkan deskripsi brand"
+          },
+          "images": {
+            "label": "Gambar",
+            "placeholder": "Upload gambar brand"
+          }
+        }
+      }
+    },
+    "category": {
+      "title": "Manajemen Kategori & Subkategori",
+      "description": "Kelola kategori dan subkategori produk",
+      "table": {
+        "headers": {
+          "name": "Nama",
+          "type": "Tipe",
+          "parent": "Parent",
+          "brand": "Brand",
+          "images": "Gambar",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "createdBy": "Dibuat oleh",
+          "updatedBy": "Diupdate oleh",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data kategori"
+      },
+      "form": {
+        "title": {
+          "add": "Tambah Kategori/Subkategori",
+          "edit": "Edit Kategori/Subkategori"
+        },
+        "fields": {
+          "name": {
+            "label": "Nama Kategori/Subkategori",
+            "placeholder": "Masukkan nama kategori"
+          },
+          "description": {
+            "label": "Deskripsi",
+            "placeholder": "Masukkan deskripsi"
+          },
+          "brand": {
+            "label": "Brand",
+            "placeholder": "Pilih brand"
+          },
+          "parentCategory": {
+            "label": "Kategori Induk",
+            "placeholder": "Pilih kategori induk (opsional)"
+          },
+          "images": {
+            "label": "Gambar",
+            "placeholder": "Upload gambar kategori"
+          }
+        }
+      }
+    },
+    "product": {
+      "title": "Manajemen Produk",
+      "description": "Kelola data produk",
+      "filters": {
+        "brand": "Filter Brand",
+        "category": "Filter Kategori",
+        "subcategory": "Filter Subkategori",
+        "search": "Cari produk..."
+      },
+      "table": {
+        "headers": {
+          "name": "Nama Produk",
+          "description": "Deskripsi",
+          "brand": "Brand",
+          "category": "Kategori",
+          "subcategory": "Subkategori",
+          "price": "Harga",
+          "stock": "Stok",
+          "images": "Gambar",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "createdBy": "Dibuat oleh",
+          "updatedBy": "Diupdate oleh",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data produk"
+      },
+      "form": {
+        "title": {
+          "add": "Tambah Produk",
+          "edit": "Edit Produk"
+        },
+        "fields": {
+          "name": {
+            "label": "Nama Produk",
+            "placeholder": "Masukkan nama produk"
+          },
+          "description": {
+            "label": "Deskripsi",
+            "placeholder": "Masukkan deskripsi produk"
+          },
+          "sku": {
+            "label": "SKU",
+            "placeholder": "Masukkan SKU produk"
+          },
+          "price": {
+            "label": "Harga",
+            "placeholder": "Masukkan harga produk"
+          },
+          "stock": {
+            "label": "Stok",
+            "placeholder": "Masukkan stok produk"
+          },
+          "brand": {
+            "label": "Brand",
+            "placeholder": "Pilih brand"
+          },
+          "category": {
+            "label": "Kategori",
+            "placeholder": "Pilih kategori"
+          },
+          "subcategory": {
+            "label": "Subkategori",
+            "placeholder": "Pilih subkategori"
+          },
+          "images": {
+            "label": "Gambar",
+            "placeholder": "Upload gambar produk"
+          }
+        },
+        "details": {
+          "title": "Detail Produk",
+          "addDetail": "Tambah Detail",
+          "fields": {
+            "name": {
+              "label": "Nama Detail",
+              "placeholder": "Masukkan nama detail"
+            },
+            "value": {
+              "label": "Nilai",
+              "placeholder": "Masukkan nilai detail"
+            },
+            "images": {
+              "label": "Gambar",
+              "placeholder": "Upload gambar detail"
+            }
+          }
+        }
+      }
+    }
+  },
+  "actions": {
+    "add": "Tambah",
+    "edit": "Edit",
+    "delete": "Hapus",
+    "view": "Lihat",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "back": "Kembali",
+    "upload": "Upload",
+    "remove": "Hapus",
+    "addDetail": "Tambah Detail",
+    "removeDetail": "Hapus Detail"
+  },
+  "messages": {
+    "confirmDelete": "Apakah Anda yakin ingin menghapus item ini?",
+    "itemSaved": "Item berhasil disimpan",
+    "itemDeleted": "Item berhasil dihapus",
+    "itemUpdated": "Item berhasil diperbarui",
+    "noData": "Tidak ada data",
+    "selectItem": "Pilih item",
+    "required": "Field ini wajib diisi",
+    "uploadSuccess": "Gambar berhasil diupload",
+    "uploadError": "Gagal mengupload gambar",
+    "deleteSuccess": "Data berhasil dihapus",
+    "deleteError": "Gagal menghapus data"
+  },
+  "types": {
+    "category": "Kategori",
+    "subcategory": "Subkategori"
+  }
+}
