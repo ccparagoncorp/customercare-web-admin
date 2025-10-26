@@ -353,11 +353,11 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative">
-                      <img
-                        src={image}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
+                        <img
+                          src={image}
+                          alt={`Upload ${index + 1}`}
+                          className="max-w-full h-auto rounded-lg"
+                        />
                       <button
                         type="button"
                         onClick={() => removeImage(index)}

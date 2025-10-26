@@ -211,7 +211,7 @@ export default function NewBrand() {
                       <img
                         src={image}
                         alt={`Upload ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border"
+                        className="max-w-full h-auto rounded-lg border"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
                         }}

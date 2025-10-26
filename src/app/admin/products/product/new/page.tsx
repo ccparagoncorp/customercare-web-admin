@@ -417,7 +417,7 @@ export default function NewProduct() {
                         <img
                           src={image}
                           alt={`Upload ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
+                          className="max-w-full h-auto rounded-lg"
                         />
                         <button
                           type="button"
@@ -512,7 +512,7 @@ export default function NewProduct() {
                             <img
                               src={image}
                               alt={`Detail ${index + 1} - ${imageIndex + 1}`}
-                              className="w-full h-16 object-cover rounded"
+                              className="max-w-full h-auto rounded"
                             />
                             <button
                               type="button"
