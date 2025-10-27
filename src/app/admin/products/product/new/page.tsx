@@ -29,7 +29,7 @@ interface Subcategory {
 
 interface ProductDetail {
   name: string
-  value: string
+  detail: string
   images: string[]
 }
 
@@ -44,9 +44,8 @@ export default function NewProduct() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sku: '',
-    price: '',
-    stock: '',
+    kapasitas: '',
+    status: 'ACTIVE',
     images: [] as string[],
     brandId: '',
     categoryId: '',
@@ -170,7 +169,7 @@ export default function NewProduct() {
   const addDetail = () => {
     setFormData(prev => ({
       ...prev,
-      details: [...prev.details, { name: '', value: '', images: [] }]
+      details: [...prev.details, { name: '', detail: '', images: [] }]
     }))
   }
 
@@ -252,17 +251,6 @@ export default function NewProduct() {
                     required
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sku">{sections.product.form.fields.sku.label}</Label>
-                  <Input
-                    id="sku"
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                    placeholder={sections.product.form.fields.sku.placeholder}
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
@@ -277,28 +265,33 @@ export default function NewProduct() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="price">{sections.product.form.fields.price.label}</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder={sections.product.form.fields.price.placeholder}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="kapasitas">{sections.product.form.fields.kapasitas.label}</Label>
+                <Input
+                  id="kapasitas"
+                  type="text"
+                  value={formData.kapasitas}
+                  onChange={(e) => setFormData(prev => ({ ...prev, kapasitas: e.target.value }))}
+                  placeholder={sections.product.form.fields.kapasitas.placeholder}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="stock">{sections.product.form.fields.stock.label}</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                    placeholder={sections.product.form.fields.stock.placeholder}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">{sections.product.form.fields.status?.label || 'Status'}</Label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                  required
+                >
+                  {/* <option value="">{sections.product.form.fields.status?.placeholder || 'Pilih status produk'}</option> */}
+                  {Object.entries(productContent.statusOptions || {}).map(([key, value]) => (
+                    <option key={key} value={key}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -461,26 +454,24 @@ export default function NewProduct() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{sections.product.form.details.fields.name.label}</Label>
-                      <Input
-                        type="text"
-                        value={detail.name}
-                        onChange={(e) => updateDetail(index, 'name', e.target.value)}
-                        placeholder={sections.product.form.details.fields.name.placeholder}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{sections.product.form.details.fields.value.label}</Label>
-                      <Input
-                        type="text"
-                        value={detail.value}
-                        onChange={(e) => updateDetail(index, 'value', e.target.value)}
-                        placeholder={sections.product.form.details.fields.value.placeholder}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>{sections.product.form.details.fields.name.label}</Label>
+                    <Input
+                      type="text"
+                      value={detail.name}
+                      onChange={(e) => updateDetail(index, 'name', e.target.value)}
+                      placeholder={sections.product.form.details.fields.name.placeholder}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{sections.product.form.details.fields.value.label}</Label>
+                    <textarea
+                      value={detail.detail}
+                      onChange={(e) => updateDetail(index, 'detail', e.target.value)}
+                      placeholder={sections.product.form.details.fields.value.placeholder}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                      rows={4}
+                    />
                   </div>
 
                   <div className="space-y-2">

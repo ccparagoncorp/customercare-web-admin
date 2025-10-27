@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } }
+        { kapasitas: { contains: search, mode: 'insensitive' } }
       ]
     }
 
@@ -83,11 +83,10 @@ export async function POST(request: NextRequest) {
     const { 
       name, 
       description, 
-      sku, 
-      price, 
-      stock, 
+      kapasitas,
+      status,
       images = [], 
-      subkategoriProdukId,
+      subcategoryId,
       details = []
     } = body
 
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    if (!subkategoriProdukId) {
+    if (!subcategoryId) {
       return NextResponse.json({ error: 'Subcategory is required' }, { status: 400 })
     }
 
@@ -104,16 +103,15 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         description,
-        sku,
-        price: price ? parseFloat(price) : null,
-        stock: stock ? parseInt(stock) : 0,
+        kapasitas,
+        status: status || 'ACTIVE',
         images,
-        subkategoriProdukId,
+        subkategoriProdukId: subcategoryId,
         createdBy: (session.user as any)?.email || 'system',
         detailProduks: {
           create: details.map((detail: any) => ({
             name: detail.name,
-            value: detail.value,
+            detail: detail.detail,
             images: detail.images || []
           }))
         }
@@ -135,9 +133,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(product, { status: 201 })
   } catch (error) {
     console.error('Error creating product:', error)
-    if (error instanceof Error && error.message.includes('Unique constraint')) {
-      return NextResponse.json({ error: 'SKU already exists' }, { status: 400 })
-    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

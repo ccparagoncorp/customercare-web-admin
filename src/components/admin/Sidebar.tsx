@@ -54,7 +54,7 @@ export function Sidebar() {
 
   return (
     <div 
-      className={`absolute min-h-screen h-full top-0 z-50 bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-200 transition-all duration-300 ${isHovered ? 'w-64' : 'w-16'} h-screen flex flex-col`}
+      className={`fixed min-h-screen h-full top-0 z-50 bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-200 transition-all duration-300 ${isHovered ? 'w-64' : 'w-16'} h-screen flex flex-col`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

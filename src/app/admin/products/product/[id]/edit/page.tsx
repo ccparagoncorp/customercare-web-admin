@@ -30,7 +30,7 @@ interface Subcategory {
 interface ProductDetail {
   id?: string
   name: string
-  value: string
+  detail: string
   images: string[]
 }
 
@@ -58,9 +58,8 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sku: '',
-    price: '',
-    stock: '',
+    kapasitas: '',
+    status: 'ACTIVE',
     images: [] as string[],
     brandId: '',
     categoryId: '',
@@ -112,14 +111,14 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
         setFormData({
           name: productData.name,
           description: productData.description || '',
-          sku: productData.sku || '',
-          price: productData.price?.toString() || '',
-          stock: productData.stock?.toString() || '',
+          kapasitas: productData.kapasitas || '',
+          status: productData.status || 'ACTIVE',
           images: productData.images || [],
           brandId: productData.subkategoriProduk.kategoriProduk.brand.id,
           categoryId: productData.subkategoriProduk.kategoriProduk.id,
           subcategoryId: productData.subkategoriProduk.id,
-          details: productData.detailProduks || []
+          details: productData.detailProduks || [],
+          updateNotes: ''
         })
       } else {
         router.push('/admin/products')
@@ -183,7 +182,6 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
       })
 
       const uploadedUrls = (await Promise.all(uploadPromises)).filter(Boolean) as string[]
-      
       if (uploadedUrls.length > 0) {
         setFormData(prev => ({
           ...prev,
@@ -208,7 +206,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
   const addDetail = () => {
     setFormData(prev => ({
       ...prev,
-      details: [...prev.details, { name: '', value: '', images: [] }]
+      details: [...prev.details, { name: '', detail: '', images: [] }]
     }))
   }
 
@@ -222,7 +220,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
   const updateDetail = (index: number, field: keyof ProductDetail, value: string | string[]) => {
     setFormData(prev => ({
       ...prev,
-      details: prev.details.map((detail, i) => 
+      details: prev.details.map((detail, i) =>
         i === index ? { ...detail, [field]: value } : detail
       )
     }))
@@ -277,7 +275,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
             {/* Basic Information */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Informasi Dasar</h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="name">{sections.product.form.fields.name.label}</Label>
@@ -288,17 +286,6 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder={sections.product.form.fields.name.placeholder}
                     required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sku">{sections.product.form.fields.sku.label}</Label>
-                  <Input
-                    id="sku"
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                    placeholder={sections.product.form.fields.sku.placeholder}
                   />
                 </div>
               </div>
@@ -315,49 +302,50 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="price">{sections.product.form.fields.price.label}</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder={sections.product.form.fields.price.placeholder}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="kapasitas">{sections.product.form.fields.kapasitas.label}</Label>
+                <Input
+                  id="kapasitas"
+                  type="text"
+                  value={formData.kapasitas}
+                  onChange={(e) => setFormData(prev => ({ ...prev, kapasitas: e.target.value }))}
+                  placeholder={sections.product.form.fields.kapasitas.placeholder}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="stock">{sections.product.form.fields.stock.label}</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                    placeholder={sections.product.form.fields.stock.placeholder}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">{sections.product.form.fields.status?.label || 'Status'}</Label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                  required
+                >
+                  <option value="">{sections.product.form.fields.status?.placeholder || 'Pilih status produk'}</option>
+                  {Object.entries(productContent.statusOptions || {}).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             {/* Category Selection */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Kategori</h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="brand">{sections.product.form.fields.brand.label}</Label>
                   <select
                     id="brand"
                     value={formData.brandId}
-                    onChange={(e) => {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        brandId: e.target.value,
-                        categoryId: '',
-                        subcategoryId: ''
-                      }))
-                    }}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      brandId: e.target.value,
+                      categoryId: '',
+                      subcategoryId: ''
+                    }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
                     required
                   >
@@ -375,13 +363,11 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                   <select
                     id="category"
                     value={formData.categoryId}
-                    onChange={(e) => {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        categoryId: e.target.value,
-                        subcategoryId: ''
-                      }))
-                    }}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      categoryId: e.target.value,
+                      subcategoryId: ''
+                    }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
                     required
                   >
@@ -421,7 +407,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
             {/* Product Images */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Gambar Produk</h3>
-              
+
               <div className="space-y-2">
                 <Label>{sections.product.form.fields.images.label}</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
@@ -442,9 +428,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                         className="hidden"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
-                      PNG, JPG, GIF hingga 10MB
-                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF hingga 10MB</p>
                   </div>
                 </div>
 
@@ -452,11 +436,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                     {formData.images.map((image, index) => (
                       <div key={index} className="relative">
-                        <img
-                          src={image}
-                          alt={`Upload ${index + 1}`}
-                          className="max-w-full h-auto rounded-lg"
-                        />
+                        <img src={image} alt={`Upload ${index + 1}`} className="max-w-full h-auto rounded-lg" />
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
@@ -499,26 +479,25 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{sections.product.form.details.fields.name.label}</Label>
-                      <Input
-                        type="text"
-                        value={detail.name}
-                        onChange={(e) => updateDetail(index, 'name', e.target.value)}
-                        placeholder={sections.product.form.details.fields.name.placeholder}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>{sections.product.form.details.fields.value.label}</Label>
-                      <Input
-                        type="text"
-                        value={detail.value}
-                        onChange={(e) => updateDetail(index, 'value', e.target.value)}
-                        placeholder={sections.product.form.details.fields.value.placeholder}
-                      />
-                    </div>
+                  <div className="space-y-2 w-full">
+                    <Label>{sections.product.form.details.fields.name.label}</Label>
+                    <Input
+                      type="text"
+                      value={detail.name}
+                      onChange={(e) => updateDetail(index, 'name', e.target.value)}
+                      placeholder={sections.product.form.details.fields.name.placeholder}
+                    />
+                  </div>
+            
+                  <div className="space-y-2 w-full">
+                    <Label>{sections.product.form.details.fields.value.label}</Label>
+                    <textarea
+                      value={detail.detail}
+                      onChange={(e) => updateDetail(index, 'detail', e.target.value)}
+                      placeholder={sections.product.form.details.fields.value.placeholder}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                      rows={4}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -526,38 +505,34 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
                       <div className="text-center">
                         <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <div className="text-sm text-gray-600 mb-2">
-                          <label className="cursor-pointer">
-                            <span className="text-[#03438f] hover:text-[#012f65]">
-                              Upload gambar detail
-                            </span>
-                            <input
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              onChange={(e) => e.target.files && handleDetailImageUpload(index, e.target.files)}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
+                        <label
+                          htmlFor={`detail-image-${index}`}
+                          className="text-sm text-[#03438f] hover:text-[#012f65] cursor-pointer"
+                        >
+                          Upload gambar detail
+                        </label>
+                        <input
+                          id={`detail-image-${index}`}
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => e.target.files && handleDetailImageUpload(index, e.target.files)}
+                          className="hidden"
+                        />
                       </div>
                     </div>
 
                     {detail.images.length > 0 && (
-                      <div className="grid grid-cols-4 gap-2 mt-2">
-                        {detail.images.map((image, imageIndex) => (
-                          <div key={imageIndex} className="relative">
-                            <img
-                              src={image}
-                              alt={`Detail ${index + 1} - ${imageIndex + 1}`}
-                              className="max-w-full h-auto rounded"
-                            />
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        {detail.images.map((img, i) => (
+                          <div key={i} className="relative">
+                            <img src={img} alt={`Detail ${index + 1} - ${i + 1}`} className="max-w-full h-auto rounded-lg" />
                             <button
                               type="button"
-                              onClick={() => removeDetailImage(index, imageIndex)}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                              onClick={() => removeDetailImage(index, i)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                             >
-                              <X className="h-2 w-2" />
+                              <X className="h-3 w-3" />
                             </button>
                           </div>
                         ))}
@@ -568,21 +543,14 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
               ))}
             </div>
 
-            <div className="flex space-x-4 pt-6">
+            {/* Submit */}
+            <div className="flex justify-end pt-6 border-t">
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-[#03438f] hover:bg-[#012f65] text-white"
+                className="bg-[#03438f] hover:bg-[#012f65] text-white px-6 py-2 rounded-lg"
               >
-                {loading ? 'Menyimpan...' : productContent.actions.save}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={loading}
-              >
-                {productContent.actions.cancel}
+                {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
               </Button>
             </div>
           </form>

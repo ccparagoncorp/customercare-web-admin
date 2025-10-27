@@ -96,14 +96,13 @@
       },
       "table": {
         "headers": {
+          "image": "Gambar",
           "name": "Nama Produk",
-          "description": "Deskripsi",
+          "kapasitas": "Kapasitas",
           "brand": "Brand",
           "category": "Kategori",
           "subcategory": "Subkategori",
-          "price": "Harga",
-          "stock": "Stok",
-          "images": "Gambar",
+          "status": "Status",
           "createdAt": "Dibuat",
           "updatedAt": "Diupdate",
           "createdBy": "Dibuat oleh",
@@ -118,26 +117,22 @@
           "edit": "Edit Produk"
         },
         "fields": {
-          "name": {
-            "label": "Nama Produk",
-            "placeholder": "Masukkan nama produk"
-          },
-          "description": {
-            "label": "Deskripsi",
-            "placeholder": "Masukkan deskripsi produk"
-          },
-          "sku": {
-            "label": "SKU",
-            "placeholder": "Masukkan SKU produk"
-          },
-          "price": {
-            "label": "Harga",
-            "placeholder": "Masukkan harga produk"
-          },
-          "stock": {
-            "label": "Stok",
-            "placeholder": "Masukkan stok produk"
-          },
+        "name": {
+          "label": "Nama Produk",
+          "placeholder": "Masukkan nama produk"
+        },
+        "description": {
+          "label": "Deskripsi",
+          "placeholder": "Masukkan deskripsi produk"
+        },
+        "kapasitas": {
+          "label": "Kapasitas",
+          "placeholder": "Masukkan kapasitas produk"
+        },
+        "status": {
+          "label": "Status",
+          "placeholder": "Pilih status produk"
+        },
           "brand": {
             "label": "Brand",
             "placeholder": "Pilih brand"
@@ -164,8 +159,8 @@
               "placeholder": "Masukkan nama detail"
             },
             "value": {
-              "label": "Nilai",
-              "placeholder": "Masukkan nilai detail"
+              "label": "Detail",
+              "placeholder": "Masukkan detail produk"
             },
             "images": {
               "label": "Gambar",
@@ -205,5 +200,11 @@
   "types": {
     "category": "Kategori",
     "subcategory": "Subkategori"
+  },
+  "statusOptions": {
+    "NEW": "Baru",
+    "REVAMP": "Revamp",
+    "DISCONTINUE": "Discontinue",
+    "ACTIVE": "Aktif"
   }
 }

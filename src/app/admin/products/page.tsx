@@ -47,9 +47,8 @@ interface Product {
   id: string
   name: string
   description?: string
-  sku?: string
-  price?: number
-  stock?: number
+  kapasitas?: string
+  status: string
   images: string[]
   subkategoriProduk: Subcategory
   detailProduks: ProductDetail[]
@@ -62,7 +61,7 @@ interface Product {
 interface ProductDetail {
   id: string
   name: string
-  value: string
+  detail: string
   images: string[]
 }
 
@@ -301,13 +300,13 @@ export default function ProductManagement() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {sections.brand.table.headers.images}
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.brand.table.headers.name}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.brand.table.headers.description}
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {sections.brand.table.headers.images}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.brand.table.headers.createdAt}
@@ -330,13 +329,27 @@ export default function ProductManagement() {
                         {brands.map((brand) => (
                           <tr key={brand.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-20 w-20">
+                                  {brand.images && brand.images.length > 0 ? (
+                                    <img
+                                      src={brand.images[0]}
+                                      alt={brand.name}
+                                      className="h-20 w-20 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
+                                      <Tag className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">{brand.name}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">{brand.description || '-'}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">{brand.images.length} gambar</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(brand.createdAt).toLocaleString('id-ID', { 
@@ -427,13 +440,13 @@ export default function ProductManagement() {
                             <thead className="bg-gray-50">
                               <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  {sections.category.table.headers.images}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   {sections.category.table.headers.name}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   {sections.category.table.headers.brand}
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  {sections.category.table.headers.images}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   {sections.category.table.headers.createdAt}
@@ -456,13 +469,27 @@ export default function ProductManagement() {
                               {categories.map((category) => (
                                 <tr key={category.id} className="hover:bg-gray-50">
                                   <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-20 w-20">
+                                        {category.images && category.images.length > 0 ? (
+                                          <img
+                                            src={category.images[0]}
+                                            alt={category.name}
+                                            className="h-20 w-20 rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <Layers className="h-5 w-5 text-gray-400" />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-900">{category.name}</div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-500">{category.brand.name}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-500">{category.images.length} gambar</div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(category.createdAt).toLocaleString('id-ID', { 
@@ -524,6 +551,9 @@ export default function ProductManagement() {
                             <thead className="bg-gray-50">
                               <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  {sections.category.table.headers.images}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   {sections.category.table.headers.name}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -531,9 +561,6 @@ export default function ProductManagement() {
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   {sections.category.table.headers.brand}
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  {sections.category.table.headers.images}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   {sections.category.table.headers.createdAt}
@@ -556,6 +583,23 @@ export default function ProductManagement() {
                               {subcategories.map((subcategory) => (
                                 <tr key={subcategory.id} className="hover:bg-gray-50">
                                   <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-20 w-20">
+                                        {subcategory.images && subcategory.images.length > 0 ? (
+                                          <img
+                                            src={subcategory.images[0]}
+                                            alt={subcategory.name}
+                                            className="h-20 w-20 rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <Layers className="h-5 w-5 text-gray-400" />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-900">{subcategory.name}</div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
@@ -563,9 +607,6 @@ export default function ProductManagement() {
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-500">{subcategory.kategoriProduk.brand.name}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-500">{subcategory.images.length} gambar</div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(subcategory.createdAt).toLocaleString('id-ID', { 
@@ -654,7 +695,13 @@ export default function ProductManagement() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {sections.product.table.headers.image}
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.product.table.headers.name}
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {sections.product.table.headers.kapasitas}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.product.table.headers.brand}
@@ -666,10 +713,7 @@ export default function ProductManagement() {
                             {sections.product.table.headers.subcategory}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {sections.product.table.headers.price}
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {sections.product.table.headers.stock}
+                            {sections.product.table.headers.status}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.product.table.headers.createdAt}
@@ -692,10 +736,27 @@ export default function ProductManagement() {
                         {products.map((product) => (
                           <tr key={product.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-20 w-20">
+                                  {product.images && product.images.length > 0 ? (
+                                    <img
+                                      src={product.images[0]}
+                                      alt={product.name}
+                                      className="h-20 w-20 object-contain"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                      <Package className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                              {product.sku && (
-                                <div className="text-xs text-gray-500">SKU: {product.sku}</div>
-                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{product.kapasitas || '-'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">
@@ -713,12 +774,15 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">
-                                {product.price ? `Rp ${product.price.toLocaleString()}` : '-'}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">{product.stock || 0}</div>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                product.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                product.status === 'NEW' ? 'bg-blue-100 text-blue-800' :
+                                product.status === 'REVAMP' ? 'bg-yellow-100 text-yellow-800' :
+                                product.status === 'DISCONTINUE' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {productContent.statusOptions?.[product.status as keyof typeof productContent.statusOptions] || product.status}
+                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(product.createdAt).toLocaleString('id-ID', { 

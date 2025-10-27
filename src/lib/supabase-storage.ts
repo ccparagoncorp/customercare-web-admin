@@ -17,7 +17,7 @@ function getServerSupabase() {
   return createClient(supabaseUrl, supabaseServiceRoleKey)
 }
 
-async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 400): Promise<T> {
+async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 1000): Promise<T> {
   let lastErr: unknown
   for (let i = 0; i < attempts; i++) {
     try {
@@ -25,8 +25,9 @@ async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 400): 
     } catch (e: any) {
       lastErr = e
       const msg = String(e?.message || '')
-      const isTimeout = msg.includes('Connect Timeout') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('fetch failed')
+      const isTimeout = msg.includes('Connect Timeout') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('fetch failed') || msg.includes('timeout')
       if (i === attempts - 1 || !isTimeout) break
+      console.log(`Retry attempt ${i + 1}/${attempts} after ${baseDelayMs * (i + 1)}ms`)
       await new Promise(r => setTimeout(r, baseDelayMs * (i + 1)))
     }
   }
@@ -199,7 +200,7 @@ export async function uploadProductFileServer(file: File, path: string): Promise
 
     const { error } = await retry(() => serverSupabase.storage
       .from(productBucketName)
-      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 500)
+      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 2000)
 
     if (error) {
       console.error('Product upload (server) error:', error)
