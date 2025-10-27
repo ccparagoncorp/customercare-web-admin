@@ -46,7 +46,8 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
     type: 'category' as 'category' | 'subcategory',
     brandId: '',
     parentCategoryId: '',
-    updateNotes: ''
+    updateNotes: '',
+    updatedBy: ''
   })
 
   const resolvedParams = use(params)
@@ -95,7 +96,9 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
             images: category.images || [],
             type: 'category',
             brandId: category.brand.id,
-            parentCategoryId: ''
+            parentCategoryId: '',
+            updateNotes: '',
+            updatedBy: (session?.user as any)?.email || ''
           })
         } else if (subcategory) {
           setCategoryData(subcategory)
@@ -105,7 +108,9 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
             images: subcategory.images || [],
             type: 'subcategory',
             brandId: subcategory.kategoriProduk.brand.id,
-            parentCategoryId: subcategory.kategoriProduk.id
+            parentCategoryId: subcategory.kategoriProduk.id,
+            updateNotes: '',
+            updatedBy: (session?.user as any)?.email || ''
           })
         } else {
           router.push('/admin/products')
@@ -227,11 +232,47 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label>Tipe</Label>
-              <div className="flex space-x-4">
-                <label className="flex items-center space-x-2">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Edit Information */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">Informasi Edit</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="updatedBy">{sections.category.form.fields.updatedBy.label} *</Label>
+                  <Input
+                    id="updatedBy"
+                    type="text"
+                    value={formData.updatedBy || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, updatedBy: e.target.value }))}
+                    placeholder={sections.category.form.fields.updatedBy.placeholder}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="updateNotes">{sections.category.form.fields.updateNotes.label} *</Label>
+                  <textarea
+                    id="updateNotes"
+                    value={formData.updateNotes || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, updateNotes: e.target.value }))}
+                    placeholder={sections.category.form.fields.updateNotes.placeholder}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                    rows={3}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Information */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">Informasi Dasar</h3>
+              
+              <div className="space-y-2">
+                <Label>Tipe</Label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center space-x-2">
                   <input
                     type="radio"
                     value="category"
@@ -256,29 +297,28 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">{sections.category.form.fields.name.label}</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder={sections.category.form.fields.name.placeholder}
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">{sections.category.form.fields.name.label}</Label>
+              <Input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder={sections.category.form.fields.name.placeholder}
+                required
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">{sections.category.form.fields.description.label}</Label>
-                <Input
-                  id="description"
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder={sections.category.form.fields.description.placeholder}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">{sections.category.form.fields.description.label}</Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder={sections.category.form.fields.description.placeholder}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                rows={3}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -370,8 +410,9 @@ export default function EditCategory({ params }: { params: Promise<{ id: string 
                 </div>
               )}
             </div>
+          </div>
 
-            <div className="flex space-x-4 pt-6">
+          <div className="flex space-x-4 pt-6">
               <Button
                 type="submit"
                 disabled={loading}

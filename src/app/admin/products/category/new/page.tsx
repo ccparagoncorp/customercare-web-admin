@@ -211,29 +211,28 @@ export default function NewCategory() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">{sections.category.form.fields.name.label}</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder={sections.category.form.fields.name.placeholder}
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">{sections.category.form.fields.name.label}</Label>
+              <Input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder={sections.category.form.fields.name.placeholder}
+                required
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">{sections.category.form.fields.description.label}</Label>
-                <Input
-                  id="description"
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder={sections.category.form.fields.description.placeholder}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">{sections.category.form.fields.description.label}</Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder={sections.category.form.fields.description.placeholder}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                rows={3}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

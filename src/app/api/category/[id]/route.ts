@@ -66,10 +66,18 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, description, images = [], type = 'category', brandId, parentCategoryId, updateNotes } = body
+    const { name, description, images = [], type = 'category', brandId, parentCategoryId, updateNotes, updatedBy } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+
+    if (!updateNotes) {
+      return NextResponse.json({ error: 'Update notes is required' }, { status: 400 })
+    }
+
+    if (!updatedBy) {
+      return NextResponse.json({ error: 'Updated by is required' }, { status: 400 })
     }
 
     const prisma = createPrismaClient()
@@ -86,7 +94,7 @@ export async function PUT(
           description,
           images,
           brandId,
-          updatedBy: (session.user as any)?.email || 'system',
+          updatedBy,
           updateNotes
         }
       }))
@@ -104,7 +112,7 @@ export async function PUT(
           description,
           images,
           kategoriProdukId: parentCategoryId,
-          updatedBy: (session.user as any)?.email || 'system',
+          updatedBy,
           updateNotes
         }
       }))

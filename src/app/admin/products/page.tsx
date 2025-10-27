@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
-import { Package, Tag, Layers, Plus, Edit, Trash2, Eye } from "lucide-react"
+import { Package, Tag, Layers, Plus, Edit, Trash2, Eye, Search, X } from "lucide-react"
 
 interface Brand {
   id: string
@@ -76,6 +76,14 @@ export default function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
+  
+  // Search and filter states
+  const [brandSearch, setBrandSearch] = useState('')
+  const [categorySearch, setCategorySearch] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [productBrandFilter, setProductBrandFilter] = useState('')
+  const [productCategoryFilter, setProductCategoryFilter] = useState('')
+  const [productSubcategoryFilter, setProductSubcategoryFilter] = useState('')
 
   useEffect(() => {
     if (status === 'loading') return
@@ -134,6 +142,29 @@ export default function ProductManagement() {
       setLoading(false)
     }
   }
+
+  // Filter functions
+  const filteredBrands = brands.filter(brand => 
+    brand.name.toLowerCase().includes(brandSearch.toLowerCase()) ||
+    (brand.description && brand.description.toLowerCase().includes(brandSearch.toLowerCase()))
+  )
+
+  const filteredCategories = categories.filter(category => 
+    category.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+    (category.description && category.description.toLowerCase().includes(categorySearch.toLowerCase()))
+  )
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(productSearch.toLowerCase())) ||
+      (product.kapasitas && product.kapasitas.toLowerCase().includes(productSearch.toLowerCase()))
+    
+    const matchesBrand = !productBrandFilter || product.subkategoriProduk.kategoriProduk.brand.id === productBrandFilter
+    const matchesCategory = !productCategoryFilter || product.subkategoriProduk.kategoriProduk.id === productCategoryFilter
+    const matchesSubcategory = !productSubcategoryFilter || product.subkategoriProduk.id === productSubcategoryFilter
+    
+    return matchesSearch && matchesBrand && matchesCategory && matchesSubcategory
+  })
 
   const handleDeleteBrand = async (id: string) => {
     if (!confirm(productContent.messages.confirmDelete)) return
@@ -285,6 +316,30 @@ export default function ProductManagement() {
                   </button>
                 </div>
 
+                {/* Search */}
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1 max-w-md">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Cari brand..."
+                        value={brandSearch}
+                        onChange={(e) => setBrandSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  {brandSearch && (
+                    <button
+                      onClick={() => setBrandSearch('')}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="w-6 h-6 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
@@ -293,6 +348,11 @@ export default function ProductManagement() {
                   <div className="text-center py-8">
                     <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">{sections.brand.table.noData}</p>
+                  </div>
+                ) : filteredBrands.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Tidak ada brand yang sesuai dengan pencarian</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -326,7 +386,7 @@ export default function ProductManagement() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {brands.map((brand) => (
+                        {filteredBrands.map((brand) => (
                           <tr key={brand.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
@@ -335,7 +395,7 @@ export default function ProductManagement() {
                                     <img
                                       src={brand.images[0]}
                                       alt={brand.name}
-                                      className="h-20 w-20 rounded-full object-cover"
+                                      className="h-20 w-20 object-contain"
                                     />
                                   ) : (
                                     <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
@@ -420,6 +480,30 @@ export default function ProductManagement() {
                   </button>
                 </div>
 
+                {/* Search */}
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1 max-w-md">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Cari kategori/subkategori..."
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  {categorySearch && (
+                    <button
+                      onClick={() => setCategorySearch('')}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="w-6 h-6 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
@@ -429,10 +513,18 @@ export default function ProductManagement() {
                     <Layers className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">{sections.category.table.noData}</p>
                   </div>
+                ) : filteredCategories.length === 0 && subcategories.filter(sub => 
+                  sub.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                  (sub.description && sub.description.toLowerCase().includes(categorySearch.toLowerCase()))
+                ).length === 0 ? (
+                  <div className="text-center py-8">
+                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Tidak ada kategori/subkategori yang sesuai dengan pencarian</p>
+                  </div>
                 ) : (
                   <div className="space-y-6">
                     {/* Categories */}
-                    {categories.length > 0 && (
+                    {filteredCategories.length > 0 && (
                       <div>
                         <h3 className="text-lg font-medium text-gray-900 mb-4">Kategori Utama</h3>
                         <div className="overflow-x-auto">
@@ -466,7 +558,7 @@ export default function ProductManagement() {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {categories.map((category) => (
+                              {filteredCategories.map((category) => (
                                 <tr key={category.id} className="hover:bg-gray-50">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
@@ -475,7 +567,7 @@ export default function ProductManagement() {
                                           <img
                                             src={category.images[0]}
                                             alt={category.name}
-                                            className="h-20 w-20 rounded-full object-cover"
+                                            className="h-20 w-20 object-contain"
                                           />
                                         ) : (
                                           <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -543,7 +635,10 @@ export default function ProductManagement() {
                     )}
 
                     {/* Subcategories */}
-                    {subcategories.length > 0 && (
+                    {subcategories.filter(sub => 
+                      sub.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                      (sub.description && sub.description.toLowerCase().includes(categorySearch.toLowerCase()))
+                    ).length > 0 && (
                       <div>
                         <h3 className="text-lg font-medium text-gray-900 mb-4">Subkategori</h3>
                         <div className="overflow-x-auto">
@@ -580,7 +675,10 @@ export default function ProductManagement() {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {subcategories.map((subcategory) => (
+                              {subcategories.filter(sub => 
+                                sub.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                                (sub.description && sub.description.toLowerCase().includes(categorySearch.toLowerCase()))
+                              ).map((subcategory) => (
                                 <tr key={subcategory.id} className="hover:bg-gray-50">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
@@ -589,7 +687,7 @@ export default function ProductManagement() {
                                           <img
                                             src={subcategory.images[0]}
                                             alt={subcategory.name}
-                                            className="h-20 w-20 rounded-full object-cover"
+                                            className="h-20 w-20 object-contain"
                                           />
                                         ) : (
                                           <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -680,6 +778,107 @@ export default function ProductManagement() {
                   </button>
                 </div>
 
+                {/* Search and Filters */}
+                <div className="space-y-4">
+                  {/* Search */}
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1 max-w-md">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Cari produk..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    {productSearch && (
+                      <button
+                        onClick={() => setProductSearch('')}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filters */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Filter Brand</label>
+                      <select
+                        value={productBrandFilter}
+                        onChange={(e) => setProductBrandFilter(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                      >
+                        <option value="">Semua Brand</option>
+                        {brands.map((brand) => (
+                          <option key={brand.id} value={brand.id}>
+                            {brand.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Filter Kategori</label>
+                      <select
+                        value={productCategoryFilter}
+                        onChange={(e) => {
+                          setProductCategoryFilter(e.target.value)
+                          setProductSubcategoryFilter('') // Reset subcategory when category changes
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                      >
+                        <option value="">Semua Kategori</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Filter Subkategori</label>
+                      <select
+                        value={productSubcategoryFilter}
+                        onChange={(e) => setProductSubcategoryFilter(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                        disabled={!productCategoryFilter}
+                      >
+                        <option value="">Semua Subkategori</option>
+                        {subcategories
+                          .filter(sub => !productCategoryFilter || sub.kategoriProduk.id === productCategoryFilter)
+                          .map((subcategory) => (
+                            <option key={subcategory.id} value={subcategory.id}>
+                              {subcategory.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Clear Filters */}
+                  {(productBrandFilter || productCategoryFilter || productSubcategoryFilter) && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => {
+                          setProductBrandFilter('')
+                          setProductCategoryFilter('')
+                          setProductSubcategoryFilter('')
+                        }}
+                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                      >
+                        <X className="h-3 w-3" />
+                        <span>Hapus Filter</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="w-6 h-6 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
@@ -688,6 +887,11 @@ export default function ProductManagement() {
                   <div className="text-center py-8">
                     <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">{sections.product.table.noData}</p>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Tidak ada produk yang sesuai dengan pencarian atau filter</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -733,7 +937,7 @@ export default function ProductManagement() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {products.map((product) => (
+                        {filteredProducts.map((product) => (
                           <tr key={product.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">

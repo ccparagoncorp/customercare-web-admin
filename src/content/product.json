@@ -78,10 +78,18 @@
             "label": "Kategori Induk",
             "placeholder": "Pilih kategori induk (opsional)"
           },
-          "images": {
-            "label": "Gambar",
-            "placeholder": "Upload gambar kategori"
-          }
+        "images": {
+          "label": "Gambar",
+          "placeholder": "Upload gambar kategori"
+        },
+        "updatedBy": {
+          "label": "Diupdate Oleh",
+          "placeholder": "Masukkan nama yang mengupdate"
+        },
+        "updateNotes": {
+          "label": "Catatan Update",
+          "placeholder": "Masukkan catatan perubahan yang dilakukan"
+        }
         }
       }
     },
@@ -145,10 +153,18 @@
             "label": "Subkategori",
             "placeholder": "Pilih subkategori"
           },
-          "images": {
-            "label": "Gambar",
-            "placeholder": "Upload gambar produk"
-          }
+        "images": {
+          "label": "Gambar",
+          "placeholder": "Upload gambar produk"
+        },
+        "updatedBy": {
+          "label": "Diupdate Oleh",
+          "placeholder": "Masukkan nama yang mengupdate"
+        },
+        "updateNotes": {
+          "label": "Catatan Update",
+          "placeholder": "Masukkan catatan perubahan yang dilakukan"
+        }
         },
         "details": {
           "title": "Detail Produk",

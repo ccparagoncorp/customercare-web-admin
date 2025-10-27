@@ -65,7 +65,8 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
     categoryId: '',
     subcategoryId: '',
     details: [] as ProductDetail[],
-    updateNotes: ''
+    updateNotes: '',
+    updatedBy: ''
   })
 
   const resolvedParams = use(params)
@@ -118,7 +119,8 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
           categoryId: productData.subkategoriProduk.kategoriProduk.id,
           subcategoryId: productData.subkategoriProduk.id,
           details: productData.detailProduks || [],
-          updateNotes: ''
+          updateNotes: '',
+          updatedBy: (session?.user as any)?.email || ''
         })
       } else {
         router.push('/admin/products')
@@ -272,6 +274,37 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Edit Information */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">Informasi Edit</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="updatedBy">{sections.product.form.fields.updatedBy.label} *</Label>
+                  <Input
+                    id="updatedBy"
+                    type="text"
+                    value={formData.updatedBy || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, updatedBy: e.target.value }))}
+                    placeholder={sections.product.form.fields.updatedBy.placeholder}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="updateNotes">{sections.product.form.fields.updateNotes.label} *</Label>
+                  <textarea
+                    id="updateNotes"
+                    value={formData.updateNotes || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, updateNotes: e.target.value }))}
+                    placeholder={sections.product.form.fields.updateNotes.placeholder}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                    rows={3}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
             {/* Basic Information */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Informasi Dasar</h3>
@@ -542,6 +575,8 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                 </div>
               ))}
             </div>
+
+            
 
             {/* Submit */}
             <div className="flex justify-end pt-6 border-t">

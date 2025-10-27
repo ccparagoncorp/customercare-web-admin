@@ -59,21 +59,29 @@ export async function PUT(
     const { 
       name, 
       description, 
-      sku, 
-      price, 
-      stock, 
+      kapasitas,
+      status,
       images = [], 
-      subkategoriProdukId,
+      subcategoryId,
       details = [],
-      updateNotes
+      updateNotes,
+      updatedBy
     } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    if (!subkategoriProdukId) {
+    if (!subcategoryId) {
       return NextResponse.json({ error: 'Subcategory is required' }, { status: 400 })
+    }
+
+    if (!updateNotes) {
+      return NextResponse.json({ error: 'Update notes is required' }, { status: 400 })
+    }
+
+    if (!updatedBy) {
+      return NextResponse.json({ error: 'Updated by is required' }, { status: 400 })
     }
 
     const prisma = createPrismaClient()
@@ -84,12 +92,11 @@ export async function PUT(
       data: {
         name,
         description,
-        sku,
-        price: price ? parseFloat(price) : null,
-        stock: stock ? parseInt(stock) : 0,
+        kapasitas,
+        status: status || 'ACTIVE',
         images,
-        subkategoriProdukId,
-        updatedBy: (session.user as any)?.email || 'system',
+        subkategoriProdukId: subcategoryId,
+        updatedBy,
         updateNotes
       }
     }))
@@ -105,7 +112,7 @@ export async function PUT(
       await withRetry(() => prisma.detailProduk.createMany({
         data: details.map((detail: any) => ({
           name: detail.name,
-          value: detail.value,
+          detail: detail.detail,
           images: detail.images || [],
           produkId: id
         }))
@@ -131,9 +138,6 @@ export async function PUT(
     return NextResponse.json(updatedProduct)
   } catch (error) {
     console.error('Error updating product:', error)
-    if (error instanceof Error && error.message.includes('Unique constraint')) {
-      return NextResponse.json({ error: 'SKU already exists' }, { status: 400 })
-    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
