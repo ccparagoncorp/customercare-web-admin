@@ -18,7 +18,8 @@ export default function NewBrand() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    images: [] as string[]
+    images: [] as string[],
+    colorbase: '#03438f'
   })
 
   useEffect(() => {
@@ -168,6 +169,27 @@ export default function NewBrand() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder={sections.brand.form.fields.description.placeholder}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="colorbase">Base Color</Label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    id="colorbase"
+                    type="color"
+                    value={formData.colorbase}
+                    onChange={(e) => setFormData(prev => ({ ...prev, colorbase: e.target.value }))}
+                    className="w-12 h-10 border border-gray-300 rounded-md cursor-pointer"
+                  />
+                  <Input
+                    type="text"
+                    value={formData.colorbase}
+                    onChange={(e) => setFormData(prev => ({ ...prev, colorbase: e.target.value }))}
+                    placeholder="#03438f"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Pilih warna dasar untuk brand ini</p>
               </div>
             </div>
 

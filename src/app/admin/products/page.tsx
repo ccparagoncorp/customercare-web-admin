@@ -12,6 +12,7 @@ interface Brand {
   name: string
   description?: string
   images: string[]
+  colorbase?: string
   createdAt: string
   updatedAt: string
   createdBy?: string
@@ -369,6 +370,9 @@ export default function ProductManagement() {
                             {sections.brand.table.headers.description}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Base Color
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.brand.table.headers.createdAt}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -409,7 +413,18 @@ export default function ProductManagement() {
                               <div className="text-sm font-medium text-gray-900">{brand.name}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">{brand.description || '-'}</div>
+                              <div className="text-sm text-gray-500">{brand.description ? brand.description.substring(0, 20) + (brand.description.length > 20 ? '...' : '') : '-'}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-6 h-6 rounded border border-gray-300"
+                                  style={{ backgroundColor: brand.colorbase || '#03438f' }}
+                                ></div>
+                                <span className="text-sm text-gray-500 font-mono">
+                                  {brand.colorbase || '#03438f'}
+                                </span>
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(brand.createdAt).toLocaleString('id-ID', { 

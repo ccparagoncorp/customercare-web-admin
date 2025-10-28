@@ -20,6 +20,7 @@ model Brand {
   name            String           @unique
   description     String?
   images          String[]
+  colorbase       String?          @default("#03438f")
   createdBy       String?
   updatedBy       String?
   updateNotes     String?

@@ -41,7 +41,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         style={{ marginLeft: `${sidebarWidth}px` }}
       >
         <main className="p-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="mx-auto">
             {children}
           </div>
         </main>

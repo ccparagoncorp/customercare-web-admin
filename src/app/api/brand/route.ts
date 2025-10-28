@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, images = [] } = body
+    const { name, description, images = [], colorbase = "#03438f" } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         images,
+        colorbase,
         createdBy: (session.user as any)?.email || 'system'
       }
     }))
