@@ -51,7 +51,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, description, images = [], colorbase, updateNotes } = body
+    const { name, description, images = [], link_sampul, colorbase, updateNotes } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -64,6 +64,7 @@ export async function PUT(
         name,
         description,
         images,
+        link_sampul,
         colorbase,
         updatedBy: (session.user as any)?.email || 'system',
         updateNotes

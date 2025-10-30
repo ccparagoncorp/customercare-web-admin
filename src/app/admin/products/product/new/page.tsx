@@ -45,6 +45,7 @@ export default function NewProduct() {
     name: '',
     description: '',
     kapasitas: '',
+    harga: '',
     status: 'ACTIVE',
     images: [] as string[],
     brandId: '',
@@ -101,7 +102,10 @@ export default function NewProduct() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          harga: formData.harga ? String(formData.harga) : undefined,
+        })
       })
 
       if (response.ok) {
@@ -277,6 +281,18 @@ export default function NewProduct() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="harga">Harga</Label>
+                <Input
+                  id="harga"
+                  type="number"
+                  step="0.01"
+                  value={formData.harga}
+                  onChange={(e) => setFormData(prev => ({ ...prev, harga: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="status">{sections.product.form.fields.status?.label || 'Status'}</Label>
                 <select
                   id="status"
@@ -331,10 +347,12 @@ export default function NewProduct() {
                     id="category"
                     value={formData.categoryId}
                     onChange={(e) => {
+                      const newCategoryId = e.target.value
+                      const hasSubs = subcategories.some(sc => sc.kategoriProduk.id === newCategoryId)
                       setFormData(prev => ({ 
                         ...prev, 
-                        categoryId: e.target.value,
-                        subcategoryId: ''
+                        categoryId: newCategoryId,
+                        subcategoryId: hasSubs ? '' : '-'
                       }))
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
@@ -357,10 +375,15 @@ export default function NewProduct() {
                     id="subcategory"
                     value={formData.subcategoryId}
                     onChange={(e) => setFormData(prev => ({ ...prev, subcategoryId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent disabled:text-gray-400 disabled:bg-gray-50"
                     required
+                    disabled={!subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId)}
                   >
-                    <option value="">{sections.product.form.fields.subcategory.placeholder}</option>
+                    <option value="">{
+                      subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId)
+                        ? sections.product.form.fields.subcategory.placeholder
+                        : 'Tidak ada subkategori'
+                    }</option>
                     {subcategories
                       .filter(subcategory => subcategory.kategoriProduk.id === formData.categoryId)
                       .map((subcategory) => (

@@ -63,6 +63,7 @@ export async function PUT(
       status,
       images = [], 
       subcategoryId,
+      categoryId,
       details = [],
       updateNotes,
       updatedBy
@@ -71,9 +72,8 @@ export async function PUT(
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
-
-    if (!subcategoryId) {
-      return NextResponse.json({ error: 'Subcategory is required' }, { status: 400 })
+    if ((!subcategoryId || subcategoryId === '-') && !categoryId) {
+      return NextResponse.json({ error: 'Either category or subcategory is required' }, { status: 400 })
     }
 
     if (!updateNotes) {
@@ -94,8 +94,10 @@ export async function PUT(
         description,
         kapasitas,
         status: status || 'ACTIVE',
+        harga: (body as any).harga ?? undefined,
         images,
-        subkategoriProdukId: subcategoryId,
+        subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
+        categoryId: (!subcategoryId || subcategoryId === '-') && categoryId ? categoryId : undefined,
         updatedBy,
         updateNotes
       }
@@ -131,6 +133,7 @@ export async function PUT(
             }
           }
         },
+        kategoriProduk: true,
         detailProduks: true
       }
     }))

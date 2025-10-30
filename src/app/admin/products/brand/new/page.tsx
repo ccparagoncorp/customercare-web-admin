@@ -19,6 +19,7 @@ export default function NewBrand() {
     name: '',
     description: '',
     images: [] as string[],
+    link_sampul: '',
     colorbase: '#03438f'
   })
 
@@ -168,6 +169,17 @@ export default function NewBrand() {
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder={sections.brand.form.fields.description.placeholder}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="link_sampul">Link Sampul</Label>
+                <Input
+                  id="link_sampul"
+                  type="url"
+                  value={formData.link_sampul}
+                  onChange={(e) => setFormData(prev => ({ ...prev, link_sampul: e.target.value }))}
+                  placeholder="https://..."
                 />
               </div>
 

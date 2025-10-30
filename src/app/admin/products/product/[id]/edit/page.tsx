@@ -59,6 +59,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
     name: '',
     description: '',
     kapasitas: '',
+    harga: '',
     status: 'ACTIVE',
     images: [] as string[],
     brandId: '',
@@ -113,11 +114,12 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
           name: productData.name,
           description: productData.description || '',
           kapasitas: productData.kapasitas || '',
+          harga: (productData.harga != null ? String(productData.harga) : ''),
           status: productData.status || 'ACTIVE',
           images: productData.images || [],
-          brandId: productData.subkategoriProduk.kategoriProduk.brand.id,
-          categoryId: productData.subkategoriProduk.kategoriProduk.id,
-          subcategoryId: productData.subkategoriProduk.id,
+          brandId: (productData.subkategoriProduk?.kategoriProduk?.brand?.id) || (productData.kategoriProduk?.brand?.id) || '',
+          categoryId: (productData.subkategoriProduk?.kategoriProduk?.id) || (productData.kategoriProduk?.id) || '',
+          subcategoryId: productData.subkategoriProduk?.id || '',
           details: productData.detailProduks || [],
           updateNotes: '',
           updatedBy: (session?.user as any)?.email || ''
@@ -141,7 +143,10 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          harga: formData.harga ? String(formData.harga) : undefined,
+        })
       })
 
       if (response.ok) {
@@ -347,6 +352,18 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="harga">Harga</Label>
+                <Input
+                  id="harga"
+                  type="number"
+                  step="0.01"
+                  value={formData.harga}
+                  onChange={(e) => setFormData(prev => ({ ...prev, harga: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="status">{sections.product.form.fields.status?.label || 'Status'}</Label>
                 <select
                   id="status"
@@ -399,7 +416,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
                       categoryId: e.target.value,
-                      subcategoryId: ''
+                      subcategoryId: subcategories.some(sc => sc.kategoriProduk.id === e.target.value) ? '' : '-'
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
                     required
@@ -421,10 +438,15 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     id="subcategory"
                     value={formData.subcategoryId}
                     onChange={(e) => setFormData(prev => ({ ...prev, subcategoryId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent disabled:text-gray-400 disabled:bg-gray-50"
                     required
+                    disabled={!subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId)}
                   >
-                    <option value="">{sections.product.form.fields.subcategory.placeholder}</option>
+                    <option value="">{
+                      subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId)
+                        ? sections.product.form.fields.subcategory.placeholder
+                        : 'Tidak ada subkategori'
+                    }</option>
                     {subcategories
                       .filter(subcategory => subcategory.kategoriProduk.id === formData.categoryId)
                       .map((subcategory) => (

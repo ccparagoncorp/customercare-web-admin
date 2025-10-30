@@ -58,6 +58,11 @@ export async function GET(request: NextRequest) {
             }
           }
         },
+        kategoriProduk: {
+          include: {
+            brand: true
+          }
+        },
         detailProduks: true
       },
       orderBy: {
@@ -87,15 +92,16 @@ export async function POST(request: NextRequest) {
       status,
       images = [], 
       subcategoryId,
-      details = []
+      details = [],
+      harga,
+      categoryId
     } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
-
-    if (!subcategoryId) {
-      return NextResponse.json({ error: 'Subcategory is required' }, { status: 400 })
+    if ((!subcategoryId || subcategoryId === '-') && !categoryId) {
+      return NextResponse.json({ error: 'Either category or subcategory is required' }, { status: 400 })
     }
 
     const prisma = createPrismaClient()
@@ -105,8 +111,10 @@ export async function POST(request: NextRequest) {
         description,
         kapasitas,
         status: status || 'ACTIVE',
+        harga: harga ?? undefined,
         images,
-        subkategoriProdukId: subcategoryId,
+        subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
+        categoryId: (!subcategoryId || subcategoryId === '-') && categoryId ? categoryId : undefined,
         createdBy: (session.user as any)?.email || 'system',
         detailProduks: {
           create: details.map((detail: any) => ({
@@ -126,6 +134,7 @@ export async function POST(request: NextRequest) {
             }
           }
         },
+        kategoriProduk: true,
         detailProduks: true
       }
     }))

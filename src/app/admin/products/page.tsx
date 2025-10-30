@@ -49,9 +49,11 @@ interface Product {
   name: string
   description?: string
   kapasitas?: string
+  harga?: string | number
   status: string
   images: string[]
-  subkategoriProduk: Subcategory
+  subkategoriProduk?: Subcategory
+  kategoriProduk?: Category
   detailProduks: ProductDetail[]
   createdAt: string
   updatedAt: string
@@ -160,9 +162,9 @@ export default function ProductManagement() {
       (product.description && product.description.toLowerCase().includes(productSearch.toLowerCase())) ||
       (product.kapasitas && product.kapasitas.toLowerCase().includes(productSearch.toLowerCase()))
     
-    const matchesBrand = !productBrandFilter || product.subkategoriProduk.kategoriProduk.brand.id === productBrandFilter
-    const matchesCategory = !productCategoryFilter || product.subkategoriProduk.kategoriProduk.id === productCategoryFilter
-    const matchesSubcategory = !productSubcategoryFilter || product.subkategoriProduk.id === productSubcategoryFilter
+    const matchesBrand = !productBrandFilter || (product.subkategoriProduk?.kategoriProduk?.brand?.id || product.kategoriProduk?.brand?.id) === productBrandFilter
+    const matchesCategory = !productCategoryFilter || (product.subkategoriProduk?.kategoriProduk?.id || product.kategoriProduk?.id) === productCategoryFilter
+    const matchesSubcategory = !productSubcategoryFilter || product.subkategoriProduk?.id === productSubcategoryFilter
     
     return matchesSearch && matchesBrand && matchesCategory && matchesSubcategory
   })
@@ -596,7 +598,9 @@ export default function ProductManagement() {
                                     <div className="text-sm font-medium text-gray-900">{category.name}</div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-500">{category.brand.name}</div>
+                                    <div className="text-sm text-gray-500">
+                                      {(category.brand.name || '-')}
+                                    </div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(category.createdAt).toLocaleString('id-ID', { 
@@ -719,7 +723,9 @@ export default function ProductManagement() {
                                     <div className="text-sm text-gray-500">{subcategory.kategoriProduk.name}</div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-500">{subcategory.kategoriProduk.brand.name}</div>
+                                    <div className="text-sm text-gray-500">
+                                      {(subcategory.kategoriProduk.brand?.name || '-')}
+                                    </div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(subcategory.createdAt).toLocaleString('id-ID', { 
@@ -923,6 +929,9 @@ export default function ProductManagement() {
                             {sections.product.table.headers.kapasitas}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Harga
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {sections.product.table.headers.brand}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -978,18 +987,25 @@ export default function ProductManagement() {
                               <div className="text-sm text-gray-500">{product.kapasitas || '-'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">
-                                {product.subkategoriProduk.kategoriProduk.brand.name}
+                              <div className="text-sm text-gray-900">
+                                {product.harga !== undefined && product.harga !== null && product.harga !== ''
+                                  ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(product.harga))
+                                  : '-'}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">
-                                {product.subkategoriProduk.kategoriProduk.name}
+                                {(product.subkategoriProduk?.kategoriProduk?.brand?.name || product.kategoriProduk?.brand?.name) || '-'}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">
-                                {product.subkategoriProduk.name}
+                                {(product.subkategoriProduk?.kategoriProduk?.name || product.kategoriProduk?.name) || '-'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">
+                                {product.subkategoriProduk?.name || '-'}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">

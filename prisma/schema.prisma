@@ -20,6 +20,7 @@ model Brand {
   name            String           @unique
   description     String?
   images          String[]
+  link_sampul     String?
   colorbase       String?          @default("#03438f")
   createdBy       String?
   updatedBy       String?
@@ -44,6 +45,7 @@ model KategoriProduk {
   updatedAt          DateTime            @updatedAt
   brand              Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
   subkategoriProduks SubkategoriProduk[]
+  produks            Produk[]            @relation("KategoriProdukToProduk")
 
   @@map("kategori_produks")
 }
@@ -70,16 +72,19 @@ model Produk {
   name                String
   description         String?
   kapasitas           String?
+  harga               Decimal?          @db.Decimal(12, 2)
   status              ProductStatus     @default(ACTIVE)
   images              String[]
-  subkategoriProdukId String
+  categoryId          String?           // opsional
+  subkategoriProdukId String?           // opsional
   createdBy           String?
   updatedBy           String?
   updateNotes         String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   detailProduks       DetailProduk[]
-  subkategoriProduk   SubkategoriProduk @relation(fields: [subkategoriProdukId], references: [id], onDelete: Cascade)
+  kategoriProduk      KategoriProduk?   @relation("KategoriProdukToProduk", fields: [categoryId], references: [id], onDelete: Cascade)
+  subkategoriProduk   SubkategoriProduk? @relation(fields: [subkategoriProdukId], references: [id], onDelete: Cascade)
 
   @@map("produks")
 }
