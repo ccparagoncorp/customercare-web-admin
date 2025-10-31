@@ -87,6 +87,8 @@ export default function ProductManagement() {
   const [productBrandFilter, setProductBrandFilter] = useState('')
   const [productCategoryFilter, setProductCategoryFilter] = useState('')
   const [productSubcategoryFilter, setProductSubcategoryFilter] = useState('')
+  const [categoryBrandFilter, setCategoryBrandFilter] = useState('')
+  const [subcategoryBrandFilter, setSubcategoryBrandFilter] = useState('')
 
   useEffect(() => {
     if (status === 'loading') return
@@ -152,10 +154,19 @@ export default function ProductManagement() {
     (brand.description && brand.description.toLowerCase().includes(brandSearch.toLowerCase()))
   )
 
-  const filteredCategories = categories.filter(category => 
-    category.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
-    (category.description && category.description.toLowerCase().includes(categorySearch.toLowerCase()))
-  )
+  const filteredCategories = categories.filter(category => {
+    const matchesSearch = category.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+      (category.description && category.description.toLowerCase().includes(categorySearch.toLowerCase()))
+    const matchesBrand = !categoryBrandFilter || category.brand.id === categoryBrandFilter
+    return matchesSearch && matchesBrand
+  })
+
+  const filteredSubcategories = subcategories.filter(sub => {
+    const matchesSearch = sub.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+      (sub.description && sub.description.toLowerCase().includes(categorySearch.toLowerCase()))
+    const matchesBrand = !subcategoryBrandFilter || sub.kategoriProduk.brand.id === subcategoryBrandFilter
+    return matchesSearch && matchesBrand
+  })
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
@@ -342,6 +353,8 @@ export default function ProductManagement() {
                     </button>
                   )}
                 </div>
+
+                {/* Filters dipindah ke atas masing-masing tabel */}
 
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
@@ -541,9 +554,24 @@ export default function ProductManagement() {
                 ) : (
                   <div className="space-y-6">
                     {/* Categories */}
-                    {filteredCategories.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Kategori Utama</h3>
+                    <div>
+                      <div className="flex items-end justify-between mb-4 gap-4 flex-col md:flex-row">
+                        <h3 className="text-lg font-medium text-gray-900">Kategori Utama</h3>
+                        <div className="w-full md:w-64">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Filter Brand</label>
+                          <select
+                            value={categoryBrandFilter}
+                            onChange={(e) => setCategoryBrandFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                          >
+                            <option value="">Semua Brand</option>
+                            {brands.map((brand) => (
+                              <option key={brand.id} value={brand.id}>{brand.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      {filteredCategories.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
@@ -650,16 +678,30 @@ export default function ProductManagement() {
                             </tbody>
                           </table>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">Tidak ada kategori untuk brand ini</div>
+                      )}
+                    </div>
 
                     {/* Subcategories */}
-                    {subcategories.filter(sub => 
-                      sub.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
-                      (sub.description && sub.description.toLowerCase().includes(categorySearch.toLowerCase()))
-                    ).length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Subkategori</h3>
+                    <div>
+                      <div className="flex items-end justify-between mb-4 gap-4 flex-col md:flex-row">
+                        <h3 className="text-lg font-medium text-gray-900">Subkategori</h3>
+                        <div className="w-full md:w-64">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Filter Brand</label>
+                          <select
+                            value={subcategoryBrandFilter}
+                            onChange={(e) => setSubcategoryBrandFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                          >
+                            <option value="">Semua Brand</option>
+                            {brands.map((brand) => (
+                              <option key={brand.id} value={brand.id}>{brand.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      {filteredSubcategories.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
@@ -694,10 +736,7 @@ export default function ProductManagement() {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {subcategories.filter(sub => 
-                                sub.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
-                                (sub.description && sub.description.toLowerCase().includes(categorySearch.toLowerCase()))
-                              ).map((subcategory) => (
+                              {filteredSubcategories.map((subcategory) => (
                                 <tr key={subcategory.id} className="hover:bg-gray-50">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
@@ -775,8 +814,10 @@ export default function ProductManagement() {
                             </tbody>
                           </table>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">Tidak ada subkategori untuk brand ini</div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
