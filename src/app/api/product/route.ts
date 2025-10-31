@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
-    if ((!subcategoryId || subcategoryId === '-') && !categoryId) {
+    if ((!subcategoryId || subcategoryId === '-') && (!categoryId || categoryId === '-')) {
       return NextResponse.json({ error: 'Either category or subcategory is required' }, { status: 400 })
     }
 
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         harga: harga ?? undefined,
         images,
         subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
-        categoryId: (!subcategoryId || subcategoryId === '-') && categoryId ? categoryId : undefined,
+        categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
         createdBy: (session.user as any)?.email || 'system',
         detailProduks: {
           create: details.map((detail: any) => ({

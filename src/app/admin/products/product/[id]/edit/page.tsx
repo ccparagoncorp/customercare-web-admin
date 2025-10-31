@@ -390,12 +390,16 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                   <select
                     id="brand"
                     value={formData.brandId}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      brandId: e.target.value,
-                      categoryId: '',
-                      subcategoryId: ''
-                    }))}
+                    onChange={(e) => {
+                      const newBrandId = e.target.value
+                      const hasCategories = categories.some(cat => cat.brand.id === newBrandId)
+                      setFormData(prev => ({
+                        ...prev,
+                        brandId: newBrandId,
+                        categoryId: hasCategories ? '' : '-',
+                        subcategoryId: ''
+                      }))
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
                     required
                   >
@@ -418,10 +422,15 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                       categoryId: e.target.value,
                       subcategoryId: subcategories.some(sc => sc.kategoriProduk.id === e.target.value) ? '' : '-'
                     }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent disabled:text-gray-400 disabled:bg-gray-50"
                     required
+                    disabled={!categories.some(cat => cat.brand.id === formData.brandId)}
                   >
-                    <option value="">{sections.product.form.fields.category.placeholder}</option>
+                    <option value="">{
+                      categories.some(cat => cat.brand.id === formData.brandId)
+                        ? sections.product.form.fields.category.placeholder
+                        : 'Tidak ada kategori'
+                    }</option>
                     {categories
                       .filter(category => category.brand.id === formData.brandId)
                       .map((category) => (
