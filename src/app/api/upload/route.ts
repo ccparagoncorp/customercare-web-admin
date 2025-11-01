@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { uploadProductFileServer } from '@/lib/supabase-storage'
+import { uploadProductFileServer, uploadSOPFileServer } from '@/lib/supabase-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File and path are required' }, { status: 400 })
     }
 
-    const result = await uploadProductFileServer(file, path)
+    // Determine which upload function to use based on path
+    let result
+    if (path.includes('jenis-sop') || path.includes('sop')) {
+      result = await uploadSOPFileServer(file, path)
+    } else {
+      result = await uploadProductFileServer(file, path)
+    }
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 500 })

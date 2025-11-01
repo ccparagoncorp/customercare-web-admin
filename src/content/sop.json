@@ -1,0 +1,63 @@
+{
+  "title": "Kelola SOP",
+  "sections": {
+    "kategoriSOP": {
+      "title": "Manajemen Kategori SOP",
+      "description": "Kelola kategori SOP",
+      "table": {
+        "headers": {
+          "name": "Nama",
+          "description": "Deskripsi",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data kategori SOP"
+      }
+    },
+    "namaSOP": {
+      "title": "Manajemen Nama SOP",
+      "description": "Kelola nama SOP",
+      "table": {
+        "headers": {
+          "name": "Nama",
+          "description": "Deskripsi",
+          "kategori": "Kategori",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data nama SOP"
+      }
+    },
+    "jenisSOP": {
+      "title": "Manajemen Jenis SOP",
+      "description": "Kelola jenis SOP",
+      "table": {
+        "headers": {
+          "name": "Nama",
+          "content": "Konten",
+          "sop": "SOP",
+          "kategori": "Kategori",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data jenis SOP"
+      }
+    }
+  },
+  "actions": {
+    "add": "Tambah",
+    "save": "Simpan",
+    "cancel": "Batal"
+  },
+  "messages": {
+    "itemSaved": "Data berhasil disimpan",
+    "itemDeleted": "Data berhasil dihapus",
+    "itemUpdated": "Data berhasil diupdate",
+    "confirmDelete": "Apakah Anda yakin ingin menghapus data ini?",
+    "itemNotFound": "Data tidak ditemukan"
+  }
+}
+
