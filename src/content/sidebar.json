@@ -11,24 +11,32 @@
     "manageKnowledge": {
       "label": "Kelola Knowledge",
       "icon": {
-        "active": "/sidebar/knowledge-active.png",
-        "inactive": "/sidebar/knowledge-inactive.png"
+        "active": "/sidebar/knowledgebasewhite.png",
+        "inactive": "/sidebar/knowledgebase.png"
       }
     },
     "manageProducts": {
       "label": "Kelola Produk",
       "icon": {
-        "active": "/sidebar/produk-active.png",
-        "inactive": "/sidebar/produk-inactive.png"
+        "active": "/sidebar/productknowledgewhite.png",
+        "inactive": "/sidebar/productknowledge.png"
       }
     },
     "manageSOP": {
       "label": "Kelola SOP",
       "icon": {
-        "active": "/sidebar/sop-active.png",
-        "inactive": "/sidebar/sop-inactive.png"
+        "active": "/sidebar/sop&workflowswhite.png",
+        "inactive": "/sidebar/sop&workflows.png"
       }
     },
+    "manageQualityTraining": {
+      "label": "Quality & Training",
+      "icon": {
+        "active": "/sidebar/quality&training white.png",
+        "inactive": "/sidebar/quality&training.png"
+      }
+    },
+
     "logout": {
       "label": "Keluar"
     }

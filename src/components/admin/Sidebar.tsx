@@ -45,6 +45,12 @@ export function Sidebar() {
       href: "/admin/sop",
       icon: admin.manageSOP.icon,
       active: pathname === "/admin/sop"
+    },
+    {
+      name: admin.manageQualityTraining.label,
+      href: "/admin/quality-training",
+      icon: admin.manageQualityTraining.icon,
+      active: pathname === "/admin/quality-training"
     }
   ]
 

@@ -6,6 +6,8 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const bucketName = process.env.SUPABASE_BUCKET_NAME || 'knowledge'
 const productBucketName = process.env.PRODUCT_BUCKET_NAME || 'products'
 const sopBucketName = process.env.SOP_BUCKET_NAME || 'sop'
+// Use ONE client-exposed env for QT uploads (browser needs access)
+const qtBucketName = process.env.NEXT_PUBLIC_QT_BUCKET_NAME || 'quality-training'
 
 // Client-side supabase (anon)
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -299,6 +301,52 @@ export async function uploadSOPFileServer(file: File, path: string): Promise<{ u
   } catch (error) {
     console.error('SOP upload (server) error:', error)
     return { url: null, error: 'Failed to upload SOP file (server)' }
+  }
+}
+
+// QT-specific upload functions
+export async function uploadQTFile(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    // Route through server API to match other buckets logic and bypass RLS
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('path', path)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) return { url: null, error: json?.error || 'Upload failed' }
+    return { url: json.url as string, error: null }
+  } catch (error) {
+    console.error('QT upload error:', error)
+    return { url: null, error: 'Failed to upload QT file' }
+  }
+}
+
+export async function uploadQTFileServer(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 15)
+    const fileExtension = file.name.split('.').pop()
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`
+    const fullPath = `${path}/${fileName}`
+
+    const { error } = await retry(() => serverSupabase.storage
+      .from(qtBucketName)
+      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 2000)
+
+    if (error) {
+      console.error('QT upload (server) error:', error)
+      return { url: null, error: error.message }
+    }
+
+    const { data: urlData } = serverSupabase.storage
+      .from(qtBucketName)
+      .getPublicUrl(fullPath)
+
+    return { url: urlData.publicUrl, error: null }
+  } catch (error) {
+    console.error('QT upload (server) error:', error)
+    return { url: null, error: 'Failed to upload QT file (server)' }
   }
 }
 

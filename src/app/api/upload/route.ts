@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { uploadProductFileServer, uploadSOPFileServer } from '@/lib/supabase-storage'
+import { uploadProductFileServer, uploadSOPFileServer, uploadQTFileServer } from '@/lib/supabase-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +22,13 @@ export async function POST(request: NextRequest) {
     let result
     if (path.includes('jenis-sop') || path.includes('sop')) {
       result = await uploadSOPFileServer(file, path)
+    } else if (
+      path.includes('quality-training') ||
+      path.includes('jenis-quality-training') ||
+      path.includes('detail-quality-training') ||
+      path.includes('subdetail-quality-training')
+    ) {
+      result = await uploadQTFileServer(file, path)
     } else {
       result = await uploadProductFileServer(file, path)
     }

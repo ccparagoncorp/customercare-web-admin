@@ -1,0 +1,63 @@
+{
+  "title": "Quality & Training",
+  "sections": {
+    "qualityTraining": {
+      "title": "Manajemen Quality & Training",
+      "description": "Kelola data Quality & Training",
+      "table": {
+        "headers": {
+          "title": "Judul",
+          "description": "Deskripsi",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data Quality & Training"
+      }
+    },
+    "jenis": {
+      "title": "Manajemen Jenis Quality & Training",
+      "description": "Kelola jenis Quality & Training",
+      "table": {
+        "headers": {
+          "name": "Nama",
+          "description": "Deskripsi",
+          "parent": "Quality & Training",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data jenis Quality & Training"
+      }
+    },
+    "detail": {
+      "title": "Manajemen Detail Quality & Training",
+      "description": "Kelola detail Quality & Training",
+      "table": {
+        "headers": {
+          "name": "Nama",
+          "description": "Deskripsi",
+          "parent": "Jenis",
+          "createdAt": "Dibuat",
+          "updatedAt": "Diupdate",
+          "actions": "Aksi"
+        },
+        "noData": "Tidak ada data detail Quality & Training"
+      }
+    }
+  },
+  "actions": {
+    "add": "Tambah",
+    "save": "Simpan",
+    "cancel": "Batal"
+  },
+  "messages": {
+    "itemSaved": "Data berhasil disimpan",
+    "itemDeleted": "Data berhasil dihapus",
+    "itemUpdated": "Data berhasil diupdate",
+    "confirmDelete": "Apakah Anda yakin ingin menghapus data ini?",
+    "itemNotFound": "Data tidak ditemukan"
+  }
+}
+
+

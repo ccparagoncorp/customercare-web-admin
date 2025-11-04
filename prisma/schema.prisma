@@ -248,3 +248,68 @@ enum UserRole {
   ADMIN
   AGENT
 }
+
+model QualityTraining {
+  id                      String                   @id @default(cuid())
+  title                   String
+  description             String?
+  logos                   String[]
+  createdBy               String?
+  updatedBy               String?
+  updateNotes             String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  jenisQualityTrainings   JenisQualityTraining[]
+
+  @@index([title])
+  @@index([createdAt])
+  @@map("quality_trainings")
+}
+
+model JenisQualityTraining {
+  id                   String             @id @default(cuid())
+  name                 String
+  description          String?
+  logos                String[]
+  qualityTrainingId    String
+  updatedBy            String?
+  updateNotes          String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  qualityTraining      QualityTraining    @relation(fields: [qualityTrainingId], references: [id], onDelete: Cascade)
+  detailQualityTrainings DetailQualityTraining[]
+
+  @@map("jenis_quality_trainings")
+}
+
+model DetailQualityTraining {
+  id                        String                 @id @default(cuid())
+  name                      String
+  description               String?
+  linkslide                 String?
+  updatedBy                 String?
+  updateNotes               String?
+  logos                     String[]
+  jenisQualityTrainingId    String
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  jenisQualityTraining      JenisQualityTraining   @relation(fields: [jenisQualityTrainingId], references: [id], onDelete: Cascade)
+  subdetailQualityTrainings SubdetailQualityTraining[]
+
+  @@map("detail_quality_trainings")
+}
+
+model SubdetailQualityTraining {
+  id                       String                 @id @default(cuid())
+  name                     String
+  description              String?
+  updatedBy                String?
+  updateNotes              String?
+  logos                    String[]
+  detailQualityTrainingId  String
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  detailQualityTraining    DetailQualityTraining  @relation(fields: [detailQualityTrainingId], references: [id], onDelete: Cascade)
+
+  @@map("subdetail_quality_trainings")
+}
