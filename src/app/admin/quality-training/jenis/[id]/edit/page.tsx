@@ -13,7 +13,7 @@ import { uploadQTFile } from "@/lib/supabase-storage"
 
 interface QualityTrainingRef { id: string; title: string }
 interface SubdetailState { id?: string; name: string; description: string; logos: string }
-interface DetailState { id?: string; name: string; description: string; linkslide?: string; logos: string; subdetails: SubdetailState[] }
+interface DetailState { id?: string; name: string; description: string; linkslide: string; logos: string; updateNotes: string; subdetails: SubdetailState[] }
 
 export default function EditJenisQualityTraining() {
   const { data: session, status } = useSession()
@@ -135,6 +135,7 @@ export default function EditJenisQualityTraining() {
           name: d.name || '',
           description: d.description || '',
           linkslide: d.linkslide || '',
+          updateNotes: d.updateNotes || '',
           logos: Array.isArray(d.logos) ? d.logos.join(', ') : '',
           subdetails: (d.subdetailQualityTrainings || []).map((s: any) => ({
             id: s.id,
@@ -148,7 +149,7 @@ export default function EditJenisQualityTraining() {
     } catch (e) { console.error(e) }
   }
 
-  const addDetail = () => setDetails(prev => [...prev, { name: '', description: '', logos: '', subdetails: [] }])
+  const addDetail = () => setDetails(prev => [...prev, { name: '', description: '', linkslide: '', updateNotes: '', logos: '', subdetails: [] }])
   const removeDetail = (idx: number) => setDetails(prev => prev.filter((_, i) => i !== idx))
   const updateDetail = (idx: number, patch: Partial<DetailState>) => setDetails(prev => prev.map((d, i) => i === idx ? { ...d, ...patch } : d))
 
@@ -171,20 +172,20 @@ export default function EditJenisQualityTraining() {
         description: formData.description,
         logos: formData.logos.split(',').map(s => s.trim()).filter(Boolean),
         qualityTrainingId: formData.qualityTrainingId,
-        updatedBy: formData.updatedBy,
-        updateNotes: formData.updateNotes,
+        updatedBy: (session?.user as any)?.name || (session?.user as any)?.email || '',
+        updateNotes: 'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || '',
         details: details.map(d => ({
           name: d.name,
           description: d.description,
           linkslide: d.linkslide,
-          updatedBy: formData.updatedBy,
-          updateNotes: formData.updateNotes,
+          updatedBy: (session?.user as any)?.name || (session?.user as any)?.email || '',
+          updateNotes: 'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || '',
           logos: d.logos.split(',').map(s => s.trim()).filter(Boolean),
           subdetails: d.subdetails.map(s => ({
             name: s.name,
             description: s.description,
-            updatedBy: formData.updatedBy,
-            updateNotes: formData.updateNotes,
+            updatedBy: (session?.user as any)?.name || (session?.user as any)?.email || '',
+            updateNotes: 'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || '',
             logos: s.logos.split(',').map(v => v.trim()).filter(Boolean)
           }))
         }))
@@ -270,11 +271,11 @@ export default function EditJenisQualityTraining() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="updatedBy">Diupdate Oleh</Label>
-                <Input id="updatedBy" type="text" value={formData.updatedBy} onChange={(e) => setFormData(prev => ({ ...prev, updatedBy: e.target.value }))} placeholder="Nama/Email" />
+                <Input id="updatedBy" type="text" value={(session?.user as any)?.name || (session?.user as any)?.email || ''} onChange={(e) => setFormData(prev => ({ ...prev, updatedBy: e.target.value }))} placeholder="Nama/Email" />
               </div>
               <div className="space-y-2 md:col-span-1">
                 <Label htmlFor="updateNotes">Catatan Update</Label>
-                <Input id="updateNotes" type="text" value={formData.updateNotes} onChange={(e) => setFormData(prev => ({ ...prev, updateNotes: e.target.value }))} placeholder="Ringkas" />
+                <Input id="updateNotes" type="text" value={'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || ''} onChange={(e) => setFormData(prev => ({ ...prev, updateNotes: e.target.value }))} placeholder="Ringkas" />
               </div>
             </div>
 
@@ -398,11 +399,11 @@ export default function EditJenisQualityTraining() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label>Link Slide</Label>
-                          <Input value={(d as any).linkslide || ''} onChange={(e) => updateDetail(idx, { linkslide: (e.target as any).value })} placeholder="https://..." />
+                          <Input value={d.linkslide || ''} onChange={(e) => updateDetail(idx, { linkslide: e.target.value })} placeholder="https://..." />
                         </div>
                         <div className="space-y-2">
                           <Label>Catatan Update (Detail)</Label>
-                          <Input value={(d as any).updateNotes || ''} onChange={(e) => updateDetail(idx, { updateNotes: (e.target as any).value })} placeholder="Ringkas" />
+                          <Input value={d.updateNotes || ''} onChange={(e) => updateDetail(idx, { updateNotes: e.target.value })} placeholder="Ringkas" />
                         </div>
                       </div>
                       
@@ -416,11 +417,10 @@ export default function EditJenisQualityTraining() {
                           </label>
                         </div>
                         <button type="button" className="text-xs text-[#03438f] hover:underline" onClick={() => openDetailFilePicker(idx)}>Pilih gambar</button>
-                        {d.logos && (<p className="text-xs text-gray-500 break-all">{d.logos}</p>)}
                         {/* Existing Detail URL previews */}
-                        {parseUrls(d.logos as any).length > 0 && (
+                        {parseUrls(d.logos).length > 0 && (
                           <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {parseUrls(d.logos as any).map((url, i2) => (
+                            {parseUrls(d.logos).map((url, i2) => (
                               <div
                                 key={i2}
                                 className="relative group rounded border bg-white"
@@ -486,11 +486,10 @@ export default function EditJenisQualityTraining() {
                                   <span className="text-xs text-gray-600">Upload gambar subdetail</span>
                                 </label>
                               </div>
-                              {s.logos && (<p className="text-xs text-gray-500 break-all">{s.logos}</p>)}
                               {/* Existing Subdetail URL previews */}
-                              {parseUrls(s.logos as any).length > 0 && (
+                              {parseUrls(s.logos).length > 0 && (
                                 <div className="mt-1 grid grid-cols-2 gap-2">
-                                  {parseUrls(s.logos as any).map((url, i3) => (
+                                  {parseUrls(s.logos).map((url, i3) => (
                                     <div
                                       key={i3}
                                       className="relative group rounded border bg-white"
