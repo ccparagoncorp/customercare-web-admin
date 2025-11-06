@@ -479,16 +479,26 @@ export async function DELETE(request: NextRequest) {
 
     // Collect all logo URLs across all levels and delete in one batch
     const urlsToDelete: string[] = []
-    if (existingKnowledge.logos?.length) urlsToDelete.push(...existingKnowledge.logos)
-    for (const d of existingKnowledge.detailKnowledges) {
-      const detail = d as DetailKnowledge
-      if (detail.logos?.length) urlsToDelete.push(...detail.logos)
-      const jenisList = detail.jenisDetailKnowledges || []
-      for (const j of jenisList) {
-        if (j.logos?.length) urlsToDelete.push(...j.logos)
-        const produkList = j.produkJenisDetailKnowledges || []
-        for (const p of produkList) {
-          if (p.logos?.length) urlsToDelete.push(...p.logos)
+    if (existingKnowledge.logos && existingKnowledge.logos.length > 0) {
+      urlsToDelete.push(...existingKnowledge.logos)
+    }
+    if (existingKnowledge.detailKnowledges && existingKnowledge.detailKnowledges.length > 0) {
+      for (const d of existingKnowledge.detailKnowledges) {
+        const detail = d as DetailKnowledge
+        if (detail.logos && detail.logos.length > 0) {
+          urlsToDelete.push(...detail.logos)
+        }
+        const jenisList = detail.jenisDetailKnowledges || []
+        for (const j of jenisList) {
+          if (j.logos && j.logos.length > 0) {
+            urlsToDelete.push(...j.logos)
+          }
+          const produkList = j.produkJenisDetailKnowledges || []
+          for (const p of produkList) {
+            if (p.logos && p.logos.length > 0) {
+              urlsToDelete.push(...p.logos)
+            }
+          }
         }
       }
     }

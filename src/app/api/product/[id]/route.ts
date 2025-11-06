@@ -233,13 +233,15 @@ export async function DELETE(
       }
 
       // Delete detail images
-      for (const detail of productWithDetails.detailProduks) {
-        if (detail.images && detail.images.length > 0) {
-          for (const imageUrl of detail.images) {
-            try {
-              await deleteProductFileServer(imageUrl)
-            } catch (error) {
-              console.error('Error deleting detail image:', imageUrl, error)
+      if (productWithDetails.detailProduks && productWithDetails.detailProduks.length > 0) {
+        for (const detail of productWithDetails.detailProduks) {
+          if (detail.images && detail.images.length > 0) {
+            for (const imageUrl of detail.images) {
+              try {
+                await deleteProductFileServer(imageUrl)
+              } catch (error) {
+                console.error('Error deleting detail image:', imageUrl, error)
+              }
             }
           }
         }
