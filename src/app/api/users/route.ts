@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
 
 interface SessionUser {
   id: string
@@ -67,9 +66,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const { email, name, password, role } = await request.json()
+    const { email, name, role } = await request.json()
 
-    if (!email || !name || !password || !role) {
+    if (!email || !name || !role) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 })
     }
 
@@ -84,15 +83,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'User already exists' }, { status: 400 })
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
-
     // Create user
     const newUser = await withRetry(() => prisma.user.create({
       data: {
         email,
         name,
-        password: hashedPassword,
         role,
         isActive: true
       },
