@@ -6,6 +6,25 @@ import { createClient } from '@supabase/supabase-js'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
+interface PrismaWhere {
+  OR?: Array<{
+    name?: { startsWith: string; mode: 'insensitive' } | { contains: string; mode: 'insensitive' }
+    email?: { startsWith: string; mode: 'insensitive' } | { contains: string; mode: 'insensitive' }
+  }>
+}
+
 // Supabase client for auth operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -20,9 +39,9 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
     
-    if (!session || !(session as any).user) {
+    if (!session || !session.user) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -30,7 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin or super admin
-    if (((session as any).user as any)?.role !== 'SUPER_ADMIN' && ((session as any).user as any)?.role !== 'ADMIN') {
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Forbidden: Admin access required' },
         { status: 403 }
@@ -38,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, password, role = 'AGENT', category = 'socialMedia' } = body
+    const { name, email, password, category = 'socialMedia' } = body
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -171,9 +191,9 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
     
-    if (!session || !(session as any).user) {
+    if (!session || !session.user) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -181,7 +201,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin or super admin
-    if (((session as any).user as any)?.role !== 'SUPER_ADMIN' && ((session as any).user as any)?.role !== 'ADMIN') {
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Forbidden: Admin access required' },
         { status: 403 }
@@ -195,11 +216,10 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // Build where clause with optimized search
-    const where: any = {}
+    const where: PrismaWhere = {}
 
     if (search) {
       // Use startsWith for better performance on indexed fields
-      const searchLower = search.toLowerCase()
       where.OR = [
         { name: { startsWith: search, mode: 'insensitive' } },
         { email: { startsWith: search, mode: 'insensitive' } },
@@ -253,9 +273,17 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
 
-    if (!session || ((session as any).user as any)?.role !== 'SUPER_ADMIN' && ((session as any).user as any)?.role !== 'ADMIN') {
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 403 }

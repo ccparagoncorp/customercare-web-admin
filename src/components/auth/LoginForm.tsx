@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Lock, User, Key, ArrowRight, Eye, EyeOff } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import authContent from "@/content/auth.json"
 

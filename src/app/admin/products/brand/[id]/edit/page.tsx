@@ -2,13 +2,22 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
+import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload, X } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 interface Brand {
   id: string
@@ -36,23 +45,7 @@ export default function EditBrand({ params }: { params: Promise<{ id: string }> 
 
   const resolvedParams = use(params)
 
-  useEffect(() => {
-    if (status === 'loading') return
-
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login')
-      return
-    }
-
-    fetchBrand()
-  }, [session, status, router, resolvedParams.id])
-
-  const fetchBrand = async () => {
+  const fetchBrand = useCallback(async () => {
     try {
       const response = await fetch(`/api/brand/${resolvedParams.id}`)
       if (response.ok) {
@@ -72,7 +65,24 @@ export default function EditBrand({ params }: { params: Promise<{ id: string }> 
       console.error('Error fetching brand:', error)
       router.push('/admin/products')
     }
-  }
+  }, [resolvedParams.id, router])
+
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login')
+      return
+    }
+
+    fetchBrand()
+  }, [session, status, router, fetchBrand])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -262,7 +272,7 @@ export default function EditBrand({ params }: { params: Promise<{ id: string }> 
                   <div className="text-sm text-gray-600 mb-4">
                     <label htmlFor="image-upload" className="cursor-pointer">
                       <span className="text-[#03438f] hover:text-[#012f65]">
-                        Klik untuk upload gambar
+                        {uploading ? 'Mengupload...' : 'Klik untuk upload gambar'}
                       </span>
                     </label>
                     <input
@@ -272,6 +282,7 @@ export default function EditBrand({ params }: { params: Promise<{ id: string }> 
                       accept="image/*"
                       onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
                       className="hidden"
+                      disabled={uploading}
                     />
                   </div>
                   <p className="text-xs text-gray-500">
@@ -284,10 +295,13 @@ export default function EditBrand({ params }: { params: Promise<{ id: string }> 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative">
-                        <img
+                        <Image
                           src={image}
                           alt={`Upload ${index + 1}`}
-                          className="max-w-full h-auto rounded-lg"
+                          width={200}
+                          height={200}
+                          className="max-w-full h-auto rounded-lg object-cover"
+                          unoptimized
                         />
                       <button
                         type="button"

@@ -3,13 +3,43 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import { uploadFileServer, deleteFileServer, deleteFilesServer } from '@/lib/supabase-storage'
+import { Prisma } from '@prisma/client'
+
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
+interface DetailKnowledge {
+  logos?: string[] | null
+  jenisDetailKnowledges?: Array<{
+    logos?: string[] | null
+    produkJenisDetailKnowledges?: Array<{
+      logos?: string[] | null
+    }>
+  }>
+}
 
 // GET /api/knowledge - Get all knowledge with search and pagination
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || !(session as any).user || ((session as any).user as any).role !== 'SUPER_ADMIN' && ((session as any).user as any).role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -23,7 +53,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // Build where clause with optimized search
-    const where: any = {}
+    const where: Prisma.KnowledgeWhereInput = {}
 
     if (search) {
       where.OR = [
@@ -109,9 +139,16 @@ export async function GET(request: NextRequest) {
 // POST /api/knowledge - Create new knowledge
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || !(session as any).user || ((session as any).user as any).role !== 'SUPER_ADMIN' && ((session as any).user as any).role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -145,8 +182,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let logoUrl = null
-
     // Upload logo if provided
     const knowledgeLogos: string[] = []
     if (logoFile && logoFile.size > 0) {
@@ -154,7 +189,6 @@ export async function POST(request: NextRequest) {
       if (uploadResult.error || !uploadResult.url) {
         return NextResponse.json({ message: 'Failed to upload logo' }, { status: 500 })
       }
-      logoUrl = uploadResult.url
       knowledgeLogos.push(uploadResult.url)
     }
     // accept multiple logos: logo_0, logo_1, ...
@@ -381,9 +415,16 @@ export async function POST(request: NextRequest) {
 // DELETE /api/knowledge - Delete knowledge
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
 
-    if (!session || !(session as any).user || ((session as any).user as any).role !== 'SUPER_ADMIN' && ((session as any).user as any).role !== 'ADMIN') {
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 403 }
@@ -440,8 +481,9 @@ export async function DELETE(request: NextRequest) {
     const urlsToDelete: string[] = []
     if (existingKnowledge.logos?.length) urlsToDelete.push(...existingKnowledge.logos)
     for (const d of existingKnowledge.detailKnowledges) {
-      if (d.logos?.length) urlsToDelete.push(...d.logos)
-      const jenisList = (d as any).jenisDetailKnowledges || []
+      const detail = d as DetailKnowledge
+      if (detail.logos?.length) urlsToDelete.push(...detail.logos)
+      const jenisList = detail.jenisDetailKnowledges || []
       for (const j of jenisList) {
         if (j.logos?.length) urlsToDelete.push(...j.logos)
         const produkList = j.produkJenisDetailKnowledges || []
@@ -481,9 +523,16 @@ export async function DELETE(request: NextRequest) {
 // PUT /api/knowledge - Update knowledge
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-    if (!session || !(session as any).user || ((session as any).user as any).role !== 'SUPER_ADMIN' && ((session as any).user as any).role !== 'ADMIN') {
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -575,7 +624,6 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    let logoUrl: string | null | undefined = undefined
     const logosToSet: string[] = []
     
     // Preserve existing knowledge logos that are not being removed
@@ -591,7 +639,6 @@ export async function PUT(request: NextRequest) {
     if (logoFile && logoFile.size > 0) {
       const uploadResult = await uploadFileServer(logoFile, 'knowledge')
       if (uploadResult.error || !uploadResult.url) return NextResponse.json({ message: 'Failed to upload logo' }, { status: 500 })
-      logoUrl = uploadResult.url
       logosToSet.push(uploadResult.url)
     }
     // multiple knowledge logos during edit

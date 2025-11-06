@@ -7,10 +7,21 @@ import { Label } from "@/components/ui/label"
 import { X, UserPlus, Eye, EyeOff } from "lucide-react"
 import agentsContent from "@/content/agents.json"
 
+interface Agent {
+  id: string
+  name: string
+  email: string
+  role: string
+  category: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
 interface AddAgentModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: (newAgent?: any) => void
+  onSuccess: (newAgent?: Agent) => void
 }
 
 export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps) {

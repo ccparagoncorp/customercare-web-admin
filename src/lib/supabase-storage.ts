@@ -25,9 +25,10 @@ async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 1000):
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn()
-    } catch (e: any) {
+    } catch (e: unknown) {
       lastErr = e
-      const msg = String(e?.message || '')
+      const error = e as { message?: string }
+      const msg = String(error?.message || '')
       const isTimeout = msg.includes('Connect Timeout') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('fetch failed') || msg.includes('timeout')
       if (i === attempts - 1 || !isTimeout) break
       console.log(`Retry attempt ${i + 1}/${attempts} after ${baseDelayMs * (i + 1)}ms`)
@@ -47,7 +48,7 @@ export async function uploadFile(file: File, path: string): Promise<{ url: strin
     const fullPath = `${path}/${fileName}`
 
     // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(bucketName)
       .upload(fullPath, file, {
         cacheControl: '3600',

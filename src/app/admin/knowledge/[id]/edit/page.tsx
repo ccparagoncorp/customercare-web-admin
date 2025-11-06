@@ -10,6 +10,39 @@ import { Label } from '@/components/ui/label'
 import { Upload, Plus, Trash2 } from 'lucide-react'
 // import Image from 'next/image'
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface KnowledgeData {
+  id?: string
+  title?: string
+  description?: string
+  logos?: string[]
+  detailKnowledges?: Array<{
+    id: string
+    name?: string
+    description?: string
+    logos?: string[]
+    jenisDetailKnowledges?: Array<{
+      id: string
+      name?: string
+      description?: string
+      logos?: string[]
+      produkJenisDetailKnowledges?: Array<{
+        id: string
+        name?: string
+        description?: string
+        logos?: string[]
+      }>
+    }>
+  }>
+}
+
 // Component untuk menangani error loading gambar (tanpa console log)
 function ImageWithFallback({ src, alt, className, onError }: { src: string, alt: string, className: string, onError: () => void }) {
   const [hasError, setHasError] = useState(false)
@@ -43,7 +76,7 @@ export default function EditKnowledgePage() {
   const params = useParams() as { id?: string }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<KnowledgeData | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [updatedBy, setUpdatedBy] = useState('')
@@ -82,7 +115,8 @@ export default function EditKnowledgePage() {
 
   useEffect(() => {
     if (status === 'loading') return
-    if (!session || ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN')) {
+    const user = session?.user as UserWithRole | undefined
+    if (!session || (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN')) {
       router.push('/login')
       return
     }
@@ -101,18 +135,18 @@ export default function EditKnowledgePage() {
         setTitle(item.title || '')
         setDescription(item.description || '')
         
-        setDetails((item.detailKnowledges || []).map((d: any) => ({ 
+        setDetails((item.detailKnowledges || []).map((d: { id: string; name?: string; description?: string; logos?: string[]; jenisDetailKnowledges?: Array<{ id: string; name?: string; description?: string; logos?: string[]; produkJenisDetailKnowledges?: Array<{ id: string; name?: string; description?: string; logos?: string[] }> }> }) => ({ 
           id: d.id, 
           name: d.name || '', 
           description: d.description || '', 
           logos: d.logos || [], 
           logo: d.logos?.[0] || undefined,
-          jenisDetails: (d.jenisDetailKnowledges || []).map((j: any) => ({
+          jenisDetails: (d.jenisDetailKnowledges || []).map((j: { id: string; name?: string; description?: string; logos?: string[]; produkJenisDetailKnowledges?: Array<{ id: string; name?: string; description?: string; logos?: string[] }> }) => ({
             id: j.id,
             name: j.name || '',
             description: j.description || '',
             logos: j.logos || [],
-            produkJenisDetails: (j.produkJenisDetailKnowledges || []).map((p: any) => ({
+            produkJenisDetails: (j.produkJenisDetailKnowledges || []).map((p: { id: string; name?: string; description?: string; logos?: string[] }) => ({
               id: p.id,
               name: p.name || '',
               description: p.description || '',
@@ -120,8 +154,8 @@ export default function EditKnowledgePage() {
             }))
           }))
         })))
-      } catch (e: any) {
-        setError(e.message || 'Error')
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Error')
       } finally {
         setLoading(false)
       }
@@ -140,7 +174,7 @@ export default function EditKnowledgePage() {
   const removeDetail = (id: string) => {
     setDetails(prev => prev.filter(d => d.id !== id))
   }
-  const updateDetail = (id: string, field: 'name' | 'description' | 'logoFile' | 'logoFiles' | 'logos', value: any) => {
+  const updateDetail = (id: string, field: 'name' | 'description' | 'logoFile' | 'logoFiles' | 'logos', value: string | File | File[] | string[]) => {
     setDetails(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d))
   }
 
@@ -165,7 +199,7 @@ export default function EditKnowledgePage() {
     ))
   }
 
-  const updateJenisDetail = (detailId: string, jenisId: string | undefined, field: string, value: any) => {
+  const updateJenisDetail = (detailId: string, jenisId: string | undefined, field: string, value: string | File | File[] | string[]) => {
     setDetails(prev => prev.map(d => 
       d.id === detailId 
         ? { 
@@ -212,13 +246,13 @@ export default function EditKnowledgePage() {
     ))
   }
 
-  const updateProdukJenisDetail = (detailId: string, jenisId: string | undefined, produkId: string | undefined, field: string, value: any) => {
+  const updateProdukJenisDetail = (detailId: string, jenisId: string | undefined, produkId: string | undefined, field: string, value: string | File | File[] | string[]) => {
     setDetails(prev => prev.map(d => 
       d.id === detailId 
         ? { 
             ...d, 
             jenisDetails: d.jenisDetails.map(j => 
-              j.id === jenisId 
+              j.id === jenisId
                 ? { 
                     ...j, 
                     produkJenisDetails: j.produkJenisDetails.map(p => 
@@ -291,7 +325,7 @@ export default function EditKnowledgePage() {
       const res = await fetch('/api/knowledge', { method: 'PUT', body: fd })
       if (!res.ok) throw new Error('Failed to update')
       router.push('/admin/knowledge')
-    } catch (e) {
+    } catch {
       setError('Gagal menyimpan perubahan')
     }
   }
@@ -530,7 +564,7 @@ export default function EditKnowledgePage() {
                       </Button>
                     </div>
                     {d.jenisDetails.length === 0 && (
-                      <p className="text-xs text-gray-500">Belum ada jenis detail. Klik "Tambah Jenis" untuk menambahkan (opsional).</p>
+                      <p className="text-xs text-gray-500">Belum ada jenis detail. Klik &quot;Tambah Jenis&quot; untuk menambahkan (opsional).</p>
                     )}
                     <div className="space-y-3">
                       {d.jenisDetails.map((j, jenisIdx) => (
@@ -641,7 +675,7 @@ export default function EditKnowledgePage() {
                               </Button>
                             </div>
                             {j.produkJenisDetails.length === 0 && (
-                              <p className="text-xs text-gray-500">Belum ada produk jenis detail. Klik "Tambah Produk" untuk menambahkan (opsional).</p>
+                              <p className="text-xs text-gray-500">Belum ada produk jenis detail. Klik &quot;Tambah Produk&quot; untuk menambahkan (opsional).</p>
                             )}
                             <div className="space-y-2">
                               {j.produkJenisDetails.map((p, produkIdx) => (

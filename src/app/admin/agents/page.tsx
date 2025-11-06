@@ -8,6 +8,14 @@ import { AgentsTable } from "@/components/admin/agent/AgentsTable"
 import { Users, UserCheck, Clock } from "lucide-react"
 import agentsContent from "@/content/agents.json"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 export default function AgentsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -43,7 +51,8 @@ export default function AgentsPage() {
       return
     }
 
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }
@@ -91,7 +100,8 @@ export default function AgentsPage() {
       }
     }
 
-    if (session && session.user && ((session.user as any).role === 'SUPER_ADMIN' || (session.user as any).role === 'ADMIN')) {
+    const user = session?.user as UserWithRole | undefined
+    if (session && user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')) {
       fetchStats()
     }
   }, [session])

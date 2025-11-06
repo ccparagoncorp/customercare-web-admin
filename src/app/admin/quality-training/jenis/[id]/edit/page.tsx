@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import qtContent from "@/content/quality-training.json"
 import { Button } from "@/components/ui/button"
@@ -11,9 +11,39 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react"
 import { uploadQTFile } from "@/lib/supabase-storage"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 interface QualityTrainingRef { id: string; title: string }
 interface SubdetailState { id?: string; name: string; description: string; logos: string }
 interface DetailState { id?: string; name: string; description: string; linkslide: string; logos: string; updateNotes: string; subdetails: SubdetailState[] }
+
+type UploadResult = { url: string; error: null } | { url: null; error: string }
+
+interface QualityTrainingItem {
+  id: string
+  title: string
+}
+
+interface DetailQualityTraining {
+  id: string
+  name?: string
+  description?: string
+  linkslide?: string
+  updateNotes?: string
+  logos?: string[]
+  subdetailQualityTrainings?: Array<{
+    id: string
+    name?: string
+    description?: string
+    logos?: string[]
+  }>
+}
 
 export default function EditJenisQualityTraining() {
   const { data: session, status } = useSession()
@@ -56,13 +86,13 @@ export default function EditJenisQualityTraining() {
       setJenisLogoFiles(prev => [...prev, ...fileArr])
       const urls: string[] = []
       for (const file of fileArr) {
-        const res = await uploadQTFile(file as File, 'jenis-quality-training')
+        const res: UploadResult = await uploadQTFile(file as File, 'jenis-quality-training')
         if (res.url) urls.push(res.url)
-        else if ((res as any).error) alert((res as any).error)
+        else if (res.error) alert(res.error)
       }
       setFormData(prev => ({ ...prev, logos: [prev.logos, urls.join(', ')].filter(Boolean).join(', ') }))
-    } catch (e: any) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
       alert('Gagal upload gambar Jenis')
     }
   }
@@ -72,13 +102,13 @@ export default function EditJenisQualityTraining() {
     try {
       const urls: string[] = []
       for (const file of Array.from(files)) {
-        const res = await uploadQTFile(file as File, `detail-quality-training`)
+        const res: UploadResult = await uploadQTFile(file as File, `detail-quality-training`)
         if (res.url) urls.push(res.url)
-        else if ((res as any).error) alert((res as any).error)
+        else if (res.error) alert(res.error)
       }
       updateDetail(idx, { logos: [details[idx].logos, urls.join(', ')].filter(Boolean).join(', ') })
-    } catch (e: any) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
       alert('Gagal upload gambar Detail')
     }
   }
@@ -88,37 +118,28 @@ export default function EditJenisQualityTraining() {
     try {
       const urls: string[] = []
       for (const file of Array.from(files)) {
-        const res = await uploadQTFile(file as File, `subdetail-quality-training`)
+        const res: UploadResult = await uploadQTFile(file as File, `subdetail-quality-training`)
         if (res.url) urls.push(res.url)
-        else if ((res as any).error) alert((res as any).error)
+        else if (res.error) alert(res.error)
       }
       updateSubdetail(detailIdx, subIdx, { logos: [details[detailIdx].subdetails[subIdx].logos, urls.join(', ')].filter(Boolean).join(', ') })
-    } catch (e: any) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
       alert('Gagal upload gambar Subdetail')
     }
   }
 
-  useEffect(() => {
-    if (status === 'loading') return
-    if (!session) { router.push('/login'); return }
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login'); return
-    }
-    Promise.all([fetchQTs(), loadData(id)]).finally(() => setInitialLoading(false))
-  }, [session, status, router, id])
-
-  const fetchQTs = async () => {
+  const fetchQTs = useCallback(async () => {
     try {
       const res = await fetch('/api/quality-training')
       if (res.ok) {
         const data = await res.json()
-        setQts(data.map((d: any) => ({ id: d.id, title: d.title })))
+        setQts(data.map((d: QualityTrainingItem) => ({ id: d.id, title: d.title })))
       }
     } catch (e) { console.error(e) }
-  }
+  }, [])
 
-  const loadData = async (itemId?: string) => {
+  const loadData = useCallback(async (itemId?: string) => {
     if (!itemId) return
     try {
       const res = await fetch(`/api/jenis-quality-training/${itemId}`)
@@ -130,14 +151,14 @@ export default function EditJenisQualityTraining() {
           logos: Array.isArray(data.logos) ? data.logos.join(', ') : '',
           qualityTrainingId: data.qualityTraining?.id || ''
         })
-        const mappedDetails = (data.detailQualityTrainings || []).map((d: any) => ({
+        const mappedDetails = (data.detailQualityTrainings || []).map((d: DetailQualityTraining) => ({
           id: d.id,
           name: d.name || '',
           description: d.description || '',
           linkslide: d.linkslide || '',
           updateNotes: d.updateNotes || '',
           logos: Array.isArray(d.logos) ? d.logos.join(', ') : '',
-          subdetails: (d.subdetailQualityTrainings || []).map((s: any) => ({
+          subdetails: (d.subdetailQualityTrainings || []).map((s: { id: string; name?: string; description?: string; logos?: string[] }) => ({
             id: s.id,
             name: s.name || '',
             description: s.description || '',
@@ -147,7 +168,17 @@ export default function EditJenisQualityTraining() {
         setDetails(mappedDetails)
       }
     } catch (e) { console.error(e) }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (status === 'loading') return
+    if (!session) { router.push('/login'); return }
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login'); return
+    }
+    Promise.all([fetchQTs(), loadData(id)]).finally(() => setInitialLoading(false))
+  }, [session, status, router, id, fetchQTs, loadData])
 
   const addDetail = () => setDetails(prev => [...prev, { name: '', description: '', linkslide: '', updateNotes: '', logos: '', subdetails: [] }])
   const removeDetail = (idx: number) => setDetails(prev => prev.filter((_, i) => i !== idx))
@@ -167,25 +198,27 @@ export default function EditJenisQualityTraining() {
     if (!id) return
     setLoading(true)
     try {
+      const user = session?.user as UserWithRole | undefined
+      const userInfo = user?.name || user?.email || ''
       const payload = {
         name: formData.name,
         description: formData.description,
         logos: formData.logos.split(',').map(s => s.trim()).filter(Boolean),
         qualityTrainingId: formData.qualityTrainingId,
-        updatedBy: (session?.user as any)?.name || (session?.user as any)?.email || '',
-        updateNotes: 'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || '',
+        updatedBy: userInfo,
+        updateNotes: 'Update by ' + userInfo,
         details: details.map(d => ({
           name: d.name,
           description: d.description,
           linkslide: d.linkslide,
-          updatedBy: (session?.user as any)?.name || (session?.user as any)?.email || '',
-          updateNotes: 'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || '',
+          updatedBy: userInfo,
+          updateNotes: 'Update by ' + userInfo,
           logos: d.logos.split(',').map(s => s.trim()).filter(Boolean),
           subdetails: d.subdetails.map(s => ({
             name: s.name,
             description: s.description,
-            updatedBy: (session?.user as any)?.name || (session?.user as any)?.email || '',
-            updateNotes: 'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || '',
+            updatedBy: userInfo,
+            updateNotes: 'Update by ' + userInfo,
             logos: s.logos.split(',').map(v => v.trim()).filter(Boolean)
           }))
         }))
@@ -271,11 +304,11 @@ export default function EditJenisQualityTraining() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="updatedBy">Diupdate Oleh</Label>
-                <Input id="updatedBy" type="text" value={(session?.user as any)?.name || (session?.user as any)?.email || ''} onChange={(e) => setFormData(prev => ({ ...prev, updatedBy: e.target.value }))} placeholder="Nama/Email" />
+                <Input id="updatedBy" type="text" value={(session?.user as UserWithRole | undefined)?.name || (session?.user as UserWithRole | undefined)?.email || ''} onChange={(e) => setFormData(prev => ({ ...prev, updatedBy: e.target.value }))} placeholder="Nama/Email" />
               </div>
               <div className="space-y-2 md:col-span-1">
                 <Label htmlFor="updateNotes">Catatan Update</Label>
-                <Input id="updateNotes" type="text" value={'Update by ' + (session?.user as any)?.name || (session?.user as any)?.email || ''} onChange={(e) => setFormData(prev => ({ ...prev, updateNotes: e.target.value }))} placeholder="Ringkas" />
+                <Input id="updateNotes" type="text" value={'Update by ' + ((session?.user as UserWithRole | undefined)?.name || (session?.user as UserWithRole | undefined)?.email || '')} onChange={(e) => setFormData(prev => ({ ...prev, updateNotes: e.target.value }))} placeholder="Ringkas" />
               </div>
             </div>
 

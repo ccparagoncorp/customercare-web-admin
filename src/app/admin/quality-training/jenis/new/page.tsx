@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import qtContent from "@/content/quality-training.json"
 import { Button } from "@/components/ui/button"
@@ -11,10 +11,23 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react"
 import { uploadQTFile } from "@/lib/supabase-storage"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 interface QualityTrainingRef { id: string; title: string }
 
 interface SubdetailState { name: string; description: string; logos: string }
 interface DetailState { name: string; description: string; linkslide?: string; logos: string; subdetails: SubdetailState[] }
+
+interface QualityTrainingItem {
+  id: string
+  title: string
+}
 
 export default function NewJenisQualityTraining() {
   const { data: session, status } = useSession()
@@ -80,24 +93,25 @@ export default function NewJenisQualityTraining() {
   }
   const [details, setDetails] = useState<DetailState[]>([])
 
-  useEffect(() => {
-    if (status === 'loading') return
-    if (!session) { router.push('/login'); return }
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login'); return
-    }
-    fetchQTs()
-  }, [session, status, router])
-
-  const fetchQTs = async () => {
+  const fetchQTs = useCallback(async () => {
     try {
       const res = await fetch('/api/quality-training')
       if (res.ok) {
         const data = await res.json()
-        setQts(data.map((d: any) => ({ id: d.id, title: d.title })))
+        setQts(data.map((d: QualityTrainingItem) => ({ id: d.id, title: d.title })))
       }
     } catch (e) { console.error(e) }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (status === 'loading') return
+    if (!session) { router.push('/login'); return }
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login'); return
+    }
+    fetchQTs()
+  }, [session, status, router, fetchQTs])
 
   const addDetail = () => setDetails(prev => [...prev, { name: '', description: '', linkslide: '', logos: '', subdetails: [] }])
   const removeDetail = (idx: number) => setDetails(prev => prev.filter((_, i) => i !== idx))
@@ -344,9 +358,9 @@ export default function NewJenisQualityTraining() {
                         <button type="button" className="text-xs text-[#03438f] hover:underline" onClick={() => openDetailFilePicker(idx)}>Pilih gambar</button>
                         {d.logos && (<p className="text-xs text-gray-500 break-all">{d.logos}</p>)}
                         {/* Existing Detail URL previews */}
-                        {parseUrls(d.logos as any).length > 0 && (
+                        {parseUrls(d.logos).length > 0 && (
                           <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {parseUrls(d.logos as any).map((url, i2) => (
+                            {parseUrls(d.logos).map((url, i2) => (
                               <div
                                 key={i2}
                                 className="relative group rounded border bg-white"
@@ -414,9 +428,9 @@ export default function NewJenisQualityTraining() {
                               </div>
                               {s.logos && (<p className="text-xs text-gray-500 break-all">{s.logos}</p>)}
                               {/* Existing Subdetail URL previews */}
-                              {parseUrls(s.logos as any).length > 0 && (
+                              {parseUrls(s.logos).length > 0 && (
                                 <div className="mt-1 grid grid-cols-2 gap-2">
-                                  {parseUrls(s.logos as any).map((url, i3) => (
+                                  {parseUrls(s.logos).map((url, i3) => (
                                     <div
                                       key={i3}
                                       className="relative group rounded border bg-white"

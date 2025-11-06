@@ -2,13 +2,22 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
+import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import sopContent from "@/content/sop.json"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload, X, Plus, Trash2 } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 interface KategoriSOP {
   id: string
@@ -27,12 +36,24 @@ interface DetailSOP {
   value: string
 }
 
+interface JenisSOP {
+  id: string
+  name: string
+  content?: string
+  images?: string[]
+  sopId: string
+  detailSOPs?: DetailSOP[]
+  sop?: {
+    kategoriSOP: KategoriSOP
+  }
+}
+
 export default function EditJenisSOP({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [jenisSOP, setJenisSOP] = useState<any>(null)
+  const [jenisSOP, setJenisSOP] = useState<JenisSOP | null>(null)
   const [kategoriSOPs, setKategoriSOPs] = useState<KategoriSOP[]>([])
   const [sops, setSOPs] = useState<SOP[]>([])
   const [formData, setFormData] = useState({
@@ -48,23 +69,7 @@ export default function EditJenisSOP({ params }: { params: Promise<{ id: string 
 
   const resolvedParams = use(params)
 
-  useEffect(() => {
-    if (status === 'loading') return
-
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login')
-      return
-    }
-
-    fetchData()
-  }, [session, status, router, resolvedParams.id])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [jenisSOPRes, kategoriSOPRes, sopsRes] = await Promise.all([
         fetch(`/api/jenis-sop/${resolvedParams.id}`),
@@ -73,15 +78,16 @@ export default function EditJenisSOP({ params }: { params: Promise<{ id: string 
       ])
 
       if (jenisSOPRes.ok) {
-        const data = await jenisSOPRes.json()
+        const data: JenisSOP = await jenisSOPRes.json()
         setJenisSOP(data)
+        const user = session?.user as UserWithRole | undefined
         setFormData({
           name: data.name,
           content: data.content || '',
           images: data.images || [],
           sopId: data.sopId,
           details: data.detailSOPs || [],
-          updatedBy: (session?.user as any)?.email || '',
+          updatedBy: user?.email || '',
           updateNotes: ''
         })
         // Set selected kategori from the SOP's kategoriSOP
@@ -107,7 +113,24 @@ export default function EditJenisSOP({ params }: { params: Promise<{ id: string 
       console.error('Error fetching data:', error)
       router.push('/admin/sop')
     }
-  }
+  }, [resolvedParams.id, session, router])
+
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login')
+      return
+    }
+
+    fetchData()
+  }, [session, status, router, fetchData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -393,10 +416,13 @@ export default function EditJenisSOP({ params }: { params: Promise<{ id: string 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                     {formData.images.map((image, index) => (
                       <div key={index} className="relative">
-                        <img
+                        <Image
                           src={image}
                           alt={`Upload ${index + 1}`}
-                          className="max-w-full h-auto rounded-lg"
+                          width={200}
+                          height={200}
+                          className="max-w-full h-auto rounded-lg object-contain"
+                          unoptimized
                         />
                         <button
                           type="button"

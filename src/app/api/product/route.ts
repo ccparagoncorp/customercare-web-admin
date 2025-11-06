@@ -2,11 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
+interface DetailInput {
+  name: string
+  detail: string
+  images?: string[]
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -16,7 +40,7 @@ export async function GET(request: NextRequest) {
     const subcategoryId = searchParams.get('subcategoryId')
     const search = searchParams.get('search')
 
-    const where: any = {}
+    const where: Prisma.ProdukWhereInput = {}
 
     if (brandId) {
       where.subkategoriProduk = {
@@ -79,8 +103,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -115,9 +144,9 @@ export async function POST(request: NextRequest) {
         images,
         subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
         categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
-        createdBy: (session.user as any)?.email || 'system',
+        createdBy: user.email || 'system',
         detailProduks: {
-          create: details.map((detail: any) => ({
+          create: (details as DetailInput[]).map((detail: DetailInput) => ({
             name: detail.name,
             detail: detail.detail,
             images: detail.images || []

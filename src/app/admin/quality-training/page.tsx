@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import qtContent from "@/content/quality-training.json"
-import { FileText, FolderTree, FileCheck, Plus, Edit, Trash2, Search, X } from "lucide-react"
+import { FileText, FolderTree, FileCheck, Plus, Edit, Trash2, Search, X, LucideIcon } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 interface QualityTraining {
   id: string
@@ -22,16 +30,6 @@ interface JenisQualityTraining {
   description?: string
   logos: string[]
   qualityTraining: QualityTraining
-  createdAt: string
-  updatedAt: string
-}
-
-interface DetailQualityTraining {
-  id: string
-  name: string
-  description?: string
-  logos: string[]
-  jenisQualityTraining: JenisQualityTraining
   createdAt: string
   updatedAt: string
 }
@@ -57,7 +55,8 @@ export default function QualityTrainingManagement() {
       router.push('/login')
       return
     }
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }
@@ -153,15 +152,15 @@ export default function QualityTrainingManagement() {
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="border-b border-gray-100">
             <nav className="flex space-x-8 px-6">
-              {[
-                { id: 'qualityTraining', label: 'Quality & Training', icon: FolderTree },
-                { id: 'jenis', label: 'Jenis', icon: FileCheck }
-              ].map((tab) => {
-                const Icon = tab.icon as any
+              {([
+                { id: 'qualityTraining' as const, label: 'Quality & Training', icon: FolderTree },
+                { id: 'jenis' as const, label: 'Jenis', icon: FileCheck }
+              ] as Array<{ id: 'qualityTraining' | 'jenis', label: string, icon: LucideIcon }>).map((tab) => {
+                const Icon = tab.icon
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === tab.id
                         ? 'border-[#03438f] text-[#03438f]'

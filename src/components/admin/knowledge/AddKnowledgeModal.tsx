@@ -1,16 +1,29 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { X, BookOpen, Plus, Trash2, Upload } from "lucide-react"
 import knowledgeContent from "@/content/knowledge.json"
 
+interface Knowledge {
+  id: string
+  title: string
+  description: string
+  logos?: string[]
+  createdAt?: string
+  updatedAt?: string
+  createdBy?: string
+  updatedBy?: string
+  detailKnowledges?: unknown[]
+}
+
 interface AddKnowledgeModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: (newKnowledge?: any) => void
+  onSuccess: (newKnowledge?: Knowledge) => void
 }
 
 interface DetailField {
@@ -254,10 +267,13 @@ export function AddKnowledgeModal({ isOpen, onClose, onSuccess }: AddKnowledgeMo
             {formData.logoFile && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
-                  <img 
-                    src={URL.createObjectURL(formData.logoFile)} 
-                    alt="Preview" 
+                  <Image
+                    src={URL.createObjectURL(formData.logoFile)}
+                    alt="Preview"
+                    width={64}
+                    height={64}
                     className="h-16 w-16 object-cover rounded-lg border border-gray-200"
+                    unoptimized
                   />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{formData.logoFile.name}</p>
@@ -365,10 +381,13 @@ export function AddKnowledgeModal({ isOpen, onClose, onSuccess }: AddKnowledgeMo
                   {detail.logoFile && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <img 
-                          src={URL.createObjectURL(detail.logoFile)} 
-                          alt="Preview" 
+                        <Image
+                          src={URL.createObjectURL(detail.logoFile)}
+                          alt="Preview"
+                          width={48}
+                          height={48}
                           className="h-12 w-12 object-cover rounded-lg border border-gray-200"
+                          unoptimized
                         />
                         <div className="flex-1">
                           <p className="text-xs font-medium text-gray-900">{detail.logoFile.name}</p>

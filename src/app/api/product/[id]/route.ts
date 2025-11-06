@@ -4,13 +4,50 @@ import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
 
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
+interface DetailInput {
+  name: string
+  detail: string
+  images?: string[]
+}
+
+interface ProductUpdateBody {
+  name?: string
+  description?: string
+  kapasitas?: string
+  status?: string
+  images?: string[]
+  subcategoryId?: string
+  categoryId?: string
+  details?: DetailInput[]
+  updateNotes?: string
+  updatedBy?: string
+  harga?: number
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -54,13 +91,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id } = await params
-    const body = await request.json()
+    const body = await request.json() as ProductUpdateBody
     const { 
       name, 
       description, 
@@ -71,7 +113,8 @@ export async function PUT(
       categoryId,
       details = [],
       updateNotes,
-      updatedBy
+      updatedBy,
+      harga
     } = body
 
     if (!name) {
@@ -92,14 +135,14 @@ export async function PUT(
     const prisma = createPrismaClient()
     
     // Update product
-    const product = await withRetry(() => prisma.produk.update({
+    await withRetry(() => prisma.produk.update({
       where: { id },
       data: {
         name,
         description,
         kapasitas,
         status: status || 'ACTIVE',
-        harga: (body as any).harga ?? undefined,
+        harga: harga ?? undefined,
         images,
         subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
         categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
@@ -117,7 +160,7 @@ export async function PUT(
 
       // Create new details
       await withRetry(() => prisma.detailProduk.createMany({
-        data: details.map((detail: any) => ({
+        data: (details as DetailInput[]).map((detail: DetailInput) => ({
           name: detail.name,
           detail: detail.detail,
           images: detail.images || [],
@@ -155,8 +198,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

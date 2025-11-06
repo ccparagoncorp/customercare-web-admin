@@ -9,11 +9,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Upload, Plus, Trash2 } from 'lucide-react'
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 interface ProdukJenisDetailField {
   id: string
   name: string
   description: string
   logoFile?: File
+  logoFiles?: File[]
 }
 
 interface JenisDetailField {
@@ -21,6 +30,7 @@ interface JenisDetailField {
   name: string
   description: string
   logoFile?: File
+  logoFiles?: File[]
   produkJenisDetails: ProdukJenisDetailField[]
 }
 
@@ -29,6 +39,7 @@ interface DetailField {
   name: string
   description: string
   logoFile?: File
+  logoFiles?: File[]
   jenisDetails: JenisDetailField[]
 }
 
@@ -46,7 +57,8 @@ export default function NewKnowledgePage() {
 
   useEffect(() => {
     if (status === 'loading') return
-    if (!session || ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN')) {
+    const user = session?.user as UserWithRole | undefined
+    if (!session || (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN')) {
       router.push('/login')
       return
     }
@@ -65,7 +77,7 @@ export default function NewKnowledgePage() {
     setDetails(prev => prev.filter(d => d.id !== id))
   }
 
-  const updateDetail = (id: string, field: keyof DetailField, value: any) => {
+  const updateDetail = (id: string, field: keyof DetailField, value: string | File | File[] | JenisDetailField[]) => {
     setDetails(prev => prev.map(d => d.id === id ? { ...d, [field]: value } as DetailField : d))
   }
 
@@ -90,7 +102,7 @@ export default function NewKnowledgePage() {
     ))
   }
 
-  const updateJenisDetail = (detailId: string, jenisId: string, field: keyof JenisDetailField, value: any) => {
+  const updateJenisDetail = (detailId: string, jenisId: string, field: keyof JenisDetailField, value: string | File | File[] | ProdukJenisDetailField[]) => {
     setDetails(prev => prev.map(d => 
       d.id === detailId 
         ? { 
@@ -137,13 +149,13 @@ export default function NewKnowledgePage() {
     ))
   }
 
-  const updateProdukJenisDetail = (detailId: string, jenisId: string, produkId: string, field: keyof ProdukJenisDetailField, value: any) => {
+  const updateProdukJenisDetail = (detailId: string, jenisId: string, produkId: string, field: keyof ProdukJenisDetailField, value: string | File | File[]) => {
     setDetails(prev => prev.map(d => 
       d.id === detailId 
         ? { 
             ...d, 
             jenisDetails: d.jenisDetails.map(j => 
-              j.id === jenisId 
+              j.id === jenisId
                 ? { 
                     ...j, 
                     produkJenisDetails: j.produkJenisDetails.map(p => 
@@ -182,7 +194,7 @@ export default function NewKnowledgePage() {
       }
 
       const minimalDetails = details.map((d, idx) => {
-        const list = (d as any).logoFiles as File[] | undefined
+        const list = d.logoFiles
         if (list && list.length) {
           // first file for backward compatibility
           fd.append(`detailLogo_${idx}`, list[0])
@@ -194,7 +206,7 @@ export default function NewKnowledgePage() {
 
         // Handle jenis details
         const jenisDetails = d.jenisDetails.map((j, jenisIdx) => {
-          const jenisLogoFiles = (j as any).logoFiles as File[] | undefined
+          const jenisLogoFiles = j.logoFiles
           if (jenisLogoFiles && jenisLogoFiles.length) {
             fd.append(`jenisLogo_${idx}_${jenisIdx}`, jenisLogoFiles[0])
             jenisLogoFiles.forEach((f, k) => {
@@ -204,7 +216,7 @@ export default function NewKnowledgePage() {
 
           // Handle produk jenis details
           const produkDetails = j.produkJenisDetails.map((p, produkIdx) => {
-            const produkLogoFiles = (p as any).logoFiles as File[] | undefined
+            const produkLogoFiles = p.logoFiles
             if (produkLogoFiles && produkLogoFiles.length) {
               fd.append(`produkLogo_${idx}_${jenisIdx}_${produkIdx}`, produkLogoFiles[0])
               produkLogoFiles.forEach((f, k) => {
@@ -236,8 +248,8 @@ export default function NewKnowledgePage() {
         throw new Error(j.message || 'Gagal menambah knowledge')
       }
       router.push('/admin/knowledge')
-    } catch (e: any) {
-      setError(e.message || 'Terjadi kesalahan')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Terjadi kesalahan')
     } finally {
       setIsSubmitting(false)
     }
@@ -371,14 +383,14 @@ export default function NewKnowledgePage() {
                     <Label className="text-sm font-medium text-gray-700">Logo Detail</Label>
                     <div className="relative">
                       <input id={`detail-logo-${d.id}`} type="file" multiple accept="image/*" onChange={(e) => updateDetail(d.id, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
-                      <label htmlFor={`detail-logo-${d.id}`} className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
+                                <label htmlFor={`detail-logo-${d.id}`} className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
                         <Upload className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-600">{(d as any).logoFiles?.length ? `${(d as any).logoFiles.length} file dipilih` : 'Upload logo detail (opsional)'}</span>
+                        <span className="text-sm text-gray-600">{d.logoFiles?.length ? `${d.logoFiles.length} file dipilih` : 'Upload logo detail (opsional)'}</span>
                       </label>
                     </div>
-                    {(d as any).logoFiles?.length ? (
+                    {d.logoFiles?.length ? (
                       <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {(d as any).logoFiles.map((f: File, idx: number) => (
+                        {d.logoFiles.map((f: File, idx: number) => (
                           <div
                             key={idx}
                             className="relative group rounded border bg-white"
@@ -394,7 +406,7 @@ export default function NewKnowledgePage() {
                               <button
                                 type="button"
                                 aria-label="Hapus gambar"
-                                onClick={() => updateDetail(d.id, 'logoFiles', (d as any).logoFiles.filter((_: File, i: number) => i !== idx))}
+                                onClick={() => updateDetail(d.id, 'logoFiles', (d.logoFiles || []).filter((_, i) => i !== idx))}
                                 className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,7 +433,7 @@ export default function NewKnowledgePage() {
                       </Button>
                     </div>
                     {d.jenisDetails.length === 0 && (
-                      <p className="text-xs text-gray-500">Belum ada jenis detail. Klik "Tambah Jenis" untuk menambahkan (opsional).</p>
+                      <p className="text-xs text-gray-500">Belum ada jenis detail. Klik &quot;Tambah Jenis&quot; untuk menambahkan (opsional).</p>
                     )}
                     <div className="space-y-3">
                       {d.jenisDetails.map((j, jenisIdx) => (
@@ -443,13 +455,13 @@ export default function NewKnowledgePage() {
                                 <input id={`jenis-logo-${j.id}`} type="file" multiple accept="image/*" onChange={(e) => updateJenisDetail(d.id, j.id, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
                                 <label htmlFor={`jenis-logo-${j.id}`} className="flex items-center justify-center w-full px-3 py-4 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
                                   <Upload className="h-3 w-3 text-gray-400 mr-2" />
-                                  <span className="text-xs text-gray-600">{(j as any).logoFiles?.length ? `${(j as any).logoFiles.length} file` : 'Upload logo'}</span>
+                                  <span className="text-xs text-gray-600">{j.logoFiles?.length ? `${j.logoFiles.length} file` : 'Upload logo'}</span>
                                 </label>
                               </div>
                             </div>
-                            {(j as any).logoFiles?.length ? (
+                            {j.logoFiles?.length ? (
                               <div className="md:col-span-2 mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {(j as any).logoFiles.map((f: File, jIdx: number) => (
+                                {j.logoFiles.map((f: File, jIdx: number) => (
                                   <div
                                     key={jIdx}
                                     className="relative group rounded border bg-white"
@@ -465,7 +477,7 @@ export default function NewKnowledgePage() {
                                       <button
                                         type="button"
                                         aria-label="Hapus gambar"
-                                        onClick={() => updateJenisDetail(d.id, j.id, 'logoFiles', (j as any).logoFiles.filter((_: File, i: number) => i !== jIdx))}
+                                        onClick={() => updateJenisDetail(d.id, j.id, 'logoFiles', (j.logoFiles || []).filter((_, i) => i !== jIdx))}
                                         className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
                                       >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,7 +505,7 @@ export default function NewKnowledgePage() {
                               </Button>
                             </div>
                             {j.produkJenisDetails.length === 0 && (
-                              <p className="text-xs text-gray-500">Belum ada produk jenis detail. Klik "Tambah Produk" untuk menambahkan (opsional).</p>
+                              <p className="text-xs text-gray-500">Belum ada produk jenis detail. Klik &quot;Tambah Produk&quot; untuk menambahkan (opsional).</p>
                             )}
                             <div className="space-y-2">
                               {j.produkJenisDetails.map((p, produkIdx) => (
@@ -515,13 +527,13 @@ export default function NewKnowledgePage() {
                                         <input id={`produk-logo-${p.id}`} type="file" multiple accept="image/*" onChange={(e) => updateProdukJenisDetail(d.id, j.id, p.id, 'logoFiles', Array.from(e.target.files || []))} className="hidden" />
                                         <label htmlFor={`produk-logo-${p.id}`} className="flex items-center justify-center w-full px-2 py-3 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#03438f] hover:bg-[#03438f]/5 transition-all duration-200">
                                           <Upload className="h-3 w-3 text-gray-400 mr-1" />
-                                          <span className="text-xs text-gray-600">{(p as any).logoFiles?.length ? `${(p as any).logoFiles.length} file` : 'Upload'}</span>
+                                          <span className="text-xs text-gray-600">{p.logoFiles?.length ? `${p.logoFiles.length} file` : 'Upload'}</span>
                                         </label>
                                       </div>
                                     </div>
-                                    {(p as any).logoFiles?.length ? (
+                                    {p.logoFiles?.length ? (
                                       <div className="md:col-span-2 mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {(p as any).logoFiles.map((f: File, pIdx: number) => (
+                                        {p.logoFiles.map((f: File, pIdx: number) => (
                                           <div
                                             key={pIdx}
                                             className="relative group rounded border bg-white"
@@ -537,7 +549,7 @@ export default function NewKnowledgePage() {
                                               <button
                                                 type="button"
                                                 aria-label="Hapus gambar"
-                                                onClick={() => updateProdukJenisDetail(d.id, j.id, p.id, 'logoFiles', (p as any).logoFiles.filter((_: File, i: number) => i !== pIdx))}
+                                                onClick={() => updateProdukJenisDetail(d.id, j.id, p.id, 'logoFiles', (p.logoFiles || []).filter((_, i) => i !== pIdx))}
                                                 className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all duration-200"
                                               >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

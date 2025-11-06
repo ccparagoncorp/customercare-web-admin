@@ -8,6 +8,23 @@ import { KnowledgeTable } from "@/components/admin/knowledge/KnowledgeTable"
 import { BookOpen, Tag, FileText } from "lucide-react"
 import knowledgeContent from "@/content/knowledge.json"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface KnowledgeItem {
+  id: string
+  detailKnowledges?: Array<{
+    id: string
+    [key: string]: unknown
+  }>
+  [key: string]: unknown
+}
+
 export default function KnowledgePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -43,7 +60,8 @@ export default function KnowledgePage() {
       return
     }
 
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }
@@ -58,7 +76,7 @@ export default function KnowledgePage() {
           const data = await response.json()
           const knowledge = data.knowledge || []
           const totalKnowledge = knowledge.length
-          const totalDetails = knowledge.reduce((sum: number, item: { detailKnowledges?: any[] }) => sum + (item.detailKnowledges?.length || 0), 0)
+          const totalDetails = knowledge.reduce((sum: number, item: KnowledgeItem) => sum + (item.detailKnowledges?.length || 0), 0)
           const totalItems = totalKnowledge + totalDetails
           
           setStatsData([
@@ -90,7 +108,8 @@ export default function KnowledgePage() {
       }
     }
 
-    if (session && session.user && ((session.user as any).role === 'SUPER_ADMIN' || (session.user as any).role === 'ADMIN')) {
+    const user = session?.user as UserWithRole | undefined
+    if (session && user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')) {
       fetchStats()
     }
   }, [session])

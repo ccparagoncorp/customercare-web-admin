@@ -5,6 +5,13 @@ import { useSession } from "next-auth/react"
 import { Search, Bell, Settings, User } from "lucide-react"
 import navigationContent from "@/content/navigation.json"
 
+interface UserWithRole {
+  name?: string | null
+  email?: string | null
+  image?: string | null
+  role?: string
+}
+
 export function Header() {
   const { data: session } = useSession()
   const { header } = navigationContent
@@ -71,7 +78,7 @@ export function Header() {
                 {session?.user?.name || "Admin"}
               </p>
               <p className="text-xs text-gray-500">
-                {(session?.user as any)?.role || "SUPER_ADMIN"}
+                {(session?.user as UserWithRole)?.role || "SUPER_ADMIN"}
               </p>
             </div>
           </div>

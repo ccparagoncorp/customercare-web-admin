@@ -3,10 +3,45 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
+interface SubdetailInput {
+  name: string
+  description: string
+  updatedBy?: string
+  updateNotes?: string
+  logos?: string[]
+}
+
+interface DetailInput {
+  name: string
+  description: string
+  linkslide?: string
+  updatedBy?: string
+  updateNotes?: string
+  logos?: string[]
+  subdetails?: SubdetailInput[]
+}
+
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const prisma = createPrismaClient()
@@ -23,10 +58,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { name, description, logos = [], qualityTrainingId, details = [], updatedBy, updateNotes } = body
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -41,7 +82,7 @@ export async function POST(request: NextRequest) {
         updatedBy,
         updateNotes,
         detailQualityTrainings: {
-          create: details.map((d: any) => ({
+          create: (details as DetailInput[]).map((d: DetailInput) => ({
             name: d.name,
             description: d.description,
             linkslide: d.linkslide,
@@ -49,7 +90,7 @@ export async function POST(request: NextRequest) {
             updateNotes: d.updateNotes,
             logos: d.logos || [],
             subdetailQualityTrainings: {
-              create: (d.subdetails || []).map((s: any) => ({
+              create: (d.subdetails || []).map((s: SubdetailInput) => ({
                 name: s.name,
                 description: s.description,
                 updatedBy: s.updatedBy,

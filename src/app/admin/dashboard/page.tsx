@@ -7,6 +7,14 @@ import { AdminLayout } from "@/components/admin/AdminLayout"
 import dashboardContent from "@/content/dashboard.json"
 import { Users, Ticket, BookOpen, Package, Activity, TrendingUp } from "lucide-react"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -19,7 +27,8 @@ export default function AdminDashboard() {
       return
     }
 
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }

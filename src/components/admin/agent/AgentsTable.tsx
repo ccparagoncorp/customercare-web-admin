@@ -13,13 +13,12 @@ interface Agent {
   email: string
   category: string
   isActive: boolean
-  createdAt: string
+  createdAt?: string
 }
 
 export function AgentsTable() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
@@ -71,17 +70,12 @@ export function AgentsTable() {
 
   // Debounce search term - only search after user stops typing for 1 second
   useEffect(() => {
-    if (searchTerm !== debouncedSearchTerm) {
-      setSearching(true)
-    }
-    
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
     }, 1000) // 1 second delay - only search when user stops typing
 
     return () => clearTimeout(timer)
-  }, [searchTerm, debouncedSearchTerm])
+  }, [searchTerm])
 
   useEffect(() => {
     fetchAgents()
@@ -95,7 +89,6 @@ export function AgentsTable() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
     }
   }
 
@@ -324,8 +317,14 @@ export function AgentsTable() {
           onSuccess={(newAgent) => {
             setShowAddModal(false)
             // Optimistic update - add to local state immediately
-            setAgents(prev => [newAgent, ...prev])
-            setPagination(prev => ({ ...prev, total: prev.total + 1 }))
+            if (newAgent) {
+              const agentWithDefaults: Agent = {
+                ...newAgent,
+                isActive: newAgent.isActive ?? true
+              }
+              setAgents(prev => [agentWithDefaults, ...prev])
+              setPagination(prev => ({ ...prev, total: prev.total + 1 }))
+            }
           }}
         />
       )}

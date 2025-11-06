@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import sopContent from "@/content/sop.json"
 import { Button } from "@/components/ui/button"
@@ -10,16 +10,31 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 interface KategoriSOP {
   id: string
   name: string
+}
+
+interface SOP {
+  id: string
+  name: string
+  description?: string
+  kategoriSOPId: string
 }
 
 export default function EditNamaSOP({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [sop, setSOP] = useState<any>(null)
+  const [sop, setSOP] = useState<SOP | null>(null)
   const [kategoriSOPs, setKategoriSOPs] = useState<KategoriSOP[]>([])
   const [formData, setFormData] = useState({
     name: '',
@@ -29,23 +44,7 @@ export default function EditNamaSOP({ params }: { params: Promise<{ id: string }
 
   const resolvedParams = use(params)
 
-  useEffect(() => {
-    if (status === 'loading') return
-
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login')
-      return
-    }
-
-    fetchData()
-  }, [session, status, router, resolvedParams.id])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [sopRes, kategoriSOPsRes] = await Promise.all([
         fetch(`/api/sop/${resolvedParams.id}`),
@@ -53,7 +52,7 @@ export default function EditNamaSOP({ params }: { params: Promise<{ id: string }
       ])
 
       if (sopRes.ok) {
-        const data = await sopRes.json()
+        const data: SOP = await sopRes.json()
         setSOP(data)
         setFormData({
           name: data.name,
@@ -74,7 +73,24 @@ export default function EditNamaSOP({ params }: { params: Promise<{ id: string }
       console.error('Error fetching data:', error)
       router.push('/admin/sop')
     }
-  }
+  }, [resolvedParams.id, router])
+
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login')
+      return
+    }
+
+    fetchData()
+  }, [session, status, router, fetchData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

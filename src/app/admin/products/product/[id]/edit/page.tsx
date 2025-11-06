@@ -2,13 +2,22 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
+import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload, X, Plus, Trash2 } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 interface Brand {
   id: string
@@ -72,23 +81,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
 
   const resolvedParams = use(params)
 
-  useEffect(() => {
-    if (status === 'loading') return
-
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login')
-      return
-    }
-
-    fetchData()
-  }, [session, status, router, resolvedParams.id])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [brandsRes, categoriesRes, productRes] = await Promise.all([
         fetch('/api/brand'),
@@ -109,6 +102,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
 
       if (productRes.ok) {
         const productData = await productRes.json()
+        const user = session?.user as UserWithRole | undefined
         setProduct(productData)
         setFormData({
           name: productData.name,
@@ -122,7 +116,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
           subcategoryId: productData.subkategoriProduk?.id || '',
           details: productData.detailProduks || [],
           updateNotes: '',
-          updatedBy: (session?.user as any)?.email || ''
+          updatedBy: user?.email || ''
         })
       } else {
         router.push('/admin/products')
@@ -131,7 +125,24 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
       console.error('Error fetching data:', error)
       router.push('/admin/products')
     }
-  }
+  }, [resolvedParams.id, session, router])
+
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login')
+      return
+    }
+
+    fetchData()
+  }, [session, status, router, fetchData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -480,7 +491,7 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     <div className="text-sm text-gray-600 mb-4">
                       <label htmlFor="image-upload" className="cursor-pointer">
                         <span className="text-[#03438f] hover:text-[#012f65]">
-                          Klik untuk upload gambar
+                          {uploading ? 'Mengupload...' : 'Klik untuk upload gambar'}
                         </span>
                       </label>
                       <input
@@ -490,7 +501,14 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                         accept="image/*"
                         onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
                         className="hidden"
+                        disabled={uploading}
                       />
+                      {uploading && (
+                        <div className="flex items-center justify-center space-x-2 mt-2">
+                          <div className="w-4 h-4 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
+                          <span className="text-sm text-gray-600">Uploading...</span>
+                        </div>
+                      )}
                     </div>
                     <p className="text-xs text-gray-500">PNG, JPG, GIF hingga 10MB</p>
                   </div>
@@ -500,7 +518,14 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                     {formData.images.map((image, index) => (
                       <div key={index} className="relative">
-                        <img src={image} alt={`Upload ${index + 1}`} className="max-w-full h-auto rounded-lg" />
+                        <Image
+                          src={image}
+                          alt={`Upload ${index + 1}`}
+                          width={200}
+                          height={200}
+                          className="max-w-full h-auto rounded-lg object-cover"
+                          unoptimized
+                        />
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
@@ -590,7 +615,14 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                         {detail.images.map((img, i) => (
                           <div key={i} className="relative">
-                            <img src={img} alt={`Detail ${index + 1} - ${i + 1}`} className="max-w-full h-auto rounded-lg" />
+                            <Image
+                              src={img}
+                              alt={`Detail ${index + 1} - ${i + 1}`}
+                              width={200}
+                              height={200}
+                              className="max-w-full h-auto rounded-lg object-cover"
+                              unoptimized
+                            />
                             <button
                               type="button"
                               onClick={() => removeDetailImage(index, i)}

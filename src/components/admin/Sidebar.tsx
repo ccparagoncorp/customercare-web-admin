@@ -5,15 +5,28 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { LayoutDashboard, Users } from "lucide-react"
+import { LayoutDashboard, Users, LucideIcon } from "lucide-react"
 import sidebarContent from "@/content/sidebar.json"
+
+interface IconPaths {
+  active: string
+  inactive: string
+}
+
+interface MenuItem {
+  name: string
+  href: string
+  icon: string | IconPaths
+  iconComponent?: LucideIcon
+  active: boolean
+}
 
 export function Sidebar() {
   const [isHovered, setIsHovered] = useState(false)
   const pathname = usePathname()
   const { admin } = sidebarContent
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       name: admin.dashboard.label,
       href: "/admin/dashboard",
@@ -31,25 +44,25 @@ export function Sidebar() {
     {
       name: admin.manageKnowledge.label,
       href: "/admin/knowledge",
-      icon: admin.manageKnowledge.icon,
+      icon: admin.manageKnowledge.icon as IconPaths,
       active: pathname === "/admin/knowledge"
     },
     {
       name: admin.manageProducts.label,
       href: "/admin/products",
-      icon: admin.manageProducts.icon,
+      icon: admin.manageProducts.icon as IconPaths,
       active: pathname === "/admin/products"
     },
     {
       name: admin.manageSOP.label,
       href: "/admin/sop",
-      icon: admin.manageSOP.icon,
+      icon: admin.manageSOP.icon as IconPaths,
       active: pathname === "/admin/sop"
     },
     {
       name: admin.manageQualityTraining.label,
       href: "/admin/quality-training",
-      icon: admin.manageQualityTraining.icon,
+      icon: admin.manageQualityTraining.icon as IconPaths,
       active: pathname === "/admin/quality-training"
     }
   ]
@@ -109,7 +122,7 @@ export function Sidebar() {
                   <item.iconComponent className={`h-4 w-4 ${item.active ? 'text-white' : 'text-[#03438f] group-hover:text-[#03438f]'}`} />
                 ) : (
                   <Image
-                    src={item.active ? (item.icon as any).active : (item.icon as any).inactive}
+                    src={item.active ? (item.icon as IconPaths).active : (item.icon as IconPaths).inactive}
                     alt={item.name}
                     width={16}
                     height={16}

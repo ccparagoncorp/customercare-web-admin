@@ -11,6 +11,14 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload } from "lucide-react"
 import { uploadQTFile } from "@/lib/supabase-storage"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 export default function NewQualityTraining() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -46,7 +54,8 @@ export default function NewQualityTraining() {
   useEffect(() => {
     if (status === 'loading') return
     if (!session) { router.push('/login'); return }
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login'); return
     }
   }, [session, status, router])

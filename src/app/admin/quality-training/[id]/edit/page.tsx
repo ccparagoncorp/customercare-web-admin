@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import qtContent from "@/content/quality-training.json"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload } from "lucide-react"
 import { uploadQTFile } from "@/lib/supabase-storage"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+type UploadResult = { url: string; error: null } | { url: null; error: string }
 
 export default function EditQualityTraining() {
   const { data: session, status } = useSession()
@@ -40,45 +50,47 @@ export default function EditQualityTraining() {
       setLogoFiles(prev => [...prev, ...fileArr])
       const urls: string[] = []
       for (const file of fileArr) {
-        const res = await uploadQTFile(file as File, 'quality-training')
+        const res: UploadResult = await uploadQTFile(file as File, 'quality-training')
         if (res.url) urls.push(res.url)
-        else if ((res as any).error) alert((res as any).error)
+        else if (res.error) alert(res.error)
       }
       setFormData(prev => ({
         ...prev,
         logos: [prev.logos, urls.join(', ')].filter(Boolean).join(', ')
       }))
-    } catch (e: any) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
       alert('Gagal upload gambar')
     }
   }
 
-  useEffect(() => {
-    if (status === 'loading') return
-    if (!session) { router.push('/login'); return }
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login'); return
-    }
-    if (id) loadData(id)
-  }, [session, status, router, id])
-
-  const loadData = async (itemId: string) => {
+  const loadData = useCallback(async (itemId: string) => {
     try {
       const res = await fetch(`/api/quality-training/${itemId}`)
       if (res.ok) {
         const data = await res.json()
+        const user = session?.user as UserWithRole | undefined
         setFormData({
           title: data.title || '',
           description: data.description || '',
           logos: Array.isArray(data.logos) ? data.logos.join(', ') : '',
-          updatedBy: data.updatedBy || (session?.user as any)?.email || '',
+          updatedBy: data.updatedBy || user?.email || '',
           updateNotes: data.updateNotes || ''
         })
       }
     } catch (e) { console.error(e) }
     finally { setInitialLoading(false) }
-  }
+  }, [session])
+
+  useEffect(() => {
+    if (status === 'loading') return
+    if (!session) { router.push('/login'); return }
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login'); return
+    }
+    if (id) loadData(id)
+  }, [session, status, router, id, loadData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -3,9 +3,18 @@
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
-import { Package, Tag, Layers, Plus, Edit, Trash2, Eye, Search, X } from "lucide-react"
+import { Package, Tag, Layers, Plus, Edit, Trash2, Search, X } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 interface Brand {
   id: string
@@ -98,7 +107,8 @@ export default function ProductManagement() {
       return
     }
 
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }
@@ -297,7 +307,7 @@ export default function ProductManagement() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => setActiveTab(tab.id as 'brand' | 'category' | 'product')}
                     className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === tab.id
                         ? 'border-[#03438f] text-[#03438f]'
@@ -411,10 +421,13 @@ export default function ProductManagement() {
                               <div className="flex items-center">
                                 <div className="flex-shrink-0 h-20 w-20">
                                   {brand.images && brand.images.length > 0 ? (
-                                    <img
+                                    <Image
                                       src={brand.images[0]}
                                       alt={brand.name}
+                                      width={80}
+                                      height={80}
                                       className="h-20 w-20 object-contain"
+                                      unoptimized
                                     />
                                   ) : (
                                     <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
@@ -609,10 +622,13 @@ export default function ProductManagement() {
                                     <div className="flex items-center">
                                       <div className="flex-shrink-0 h-20 w-20">
                                         {category.images && category.images.length > 0 ? (
-                                          <img
+                                          <Image
                                             src={category.images[0]}
                                             alt={category.name}
+                                            width={80}
+                                            height={80}
                                             className="h-20 w-20 object-contain"
+                                            unoptimized
                                           />
                                         ) : (
                                           <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -742,10 +758,13 @@ export default function ProductManagement() {
                                     <div className="flex items-center">
                                       <div className="flex-shrink-0 h-20 w-20">
                                         {subcategory.images && subcategory.images.length > 0 ? (
-                                          <img
+                                          <Image
                                             src={subcategory.images[0]}
                                             alt={subcategory.name}
+                                            width={80}
+                                            height={80}
                                             className="h-20 w-20 object-contain"
+                                            unoptimized
                                           />
                                         ) : (
                                           <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -1008,10 +1027,13 @@ export default function ProductManagement() {
                               <div className="flex items-center">
                                 <div className="flex-shrink-0 h-20 w-20">
                                   {product.images && product.images.length > 0 ? (
-                                    <img
+                                    <Image
                                       src={product.images[0]}
                                       alt={product.name}
+                                      width={80}
+                                      height={80}
                                       className="h-20 w-20 object-contain"
+                                      unoptimized
                                     />
                                   ) : (
                                     <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">

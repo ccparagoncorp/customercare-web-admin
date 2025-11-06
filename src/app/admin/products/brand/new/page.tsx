@@ -3,12 +3,21 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload, X } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 export default function NewBrand() {
   const { data: session, status } = useSession()
@@ -31,7 +40,8 @@ export default function NewBrand() {
       return
     }
 
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }
@@ -242,10 +252,13 @@ export default function NewBrand() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative">
-                      <img
+                      <Image
                         src={image}
                         alt={`Upload ${index + 1}`}
-                        className="max-w-full h-auto rounded-lg border"
+                        width={200}
+                        height={200}
+                        className="max-w-full h-auto rounded-lg border object-cover"
+                        unoptimized
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
                         }}

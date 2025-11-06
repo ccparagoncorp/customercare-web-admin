@@ -3,12 +3,21 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload, X, Plus, Trash2 } from "lucide-react"
+
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
 
 interface Brand {
   id: string
@@ -62,7 +71,8 @@ export default function NewProduct() {
       return
     }
 
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
       router.push('/login')
       return
     }
@@ -415,7 +425,7 @@ export default function NewProduct() {
                     <div className="text-sm text-gray-600 mb-4">
                       <label htmlFor="image-upload" className="cursor-pointer">
                         <span className="text-[#03438f] hover:text-[#012f65]">
-                          Klik untuk upload gambar
+                          {uploading ? 'Mengupload...' : 'Klik untuk upload gambar'}
                         </span>
                       </label>
                       <input
@@ -425,7 +435,14 @@ export default function NewProduct() {
                         accept="image/*"
                         onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
                         className="hidden"
+                        disabled={uploading}
                       />
+                      {uploading && (
+                        <div className="flex items-center justify-center space-x-2 mt-2">
+                          <div className="w-4 h-4 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
+                          <span className="text-sm text-gray-600">Uploading...</span>
+                        </div>
+                      )}
                     </div>
                     <p className="text-xs text-gray-500">
                       PNG, JPG, GIF hingga 10MB
@@ -437,10 +454,13 @@ export default function NewProduct() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                     {formData.images.map((image, index) => (
                       <div key={index} className="relative">
-                        <img
+                        <Image
                           src={image}
                           alt={`Upload ${index + 1}`}
-                          className="max-w-full h-auto rounded-lg"
+                          width={200}
+                          height={200}
+                          className="max-w-full h-auto rounded-lg object-cover"
+                          unoptimized
                         />
                         <button
                           type="button"
@@ -530,10 +550,13 @@ export default function NewProduct() {
                       <div className="grid grid-cols-4 gap-2 mt-2">
                         {detail.images.map((image, imageIndex) => (
                           <div key={imageIndex} className="relative">
-                            <img
+                            <Image
                               src={image}
                               alt={`Detail ${index + 1} - ${imageIndex + 1}`}
-                              className="max-w-full h-auto rounded"
+                              width={200}
+                              height={200}
+                              className="max-w-full h-auto rounded object-cover"
+                              unoptimized
                             />
                             <button
                               type="button"

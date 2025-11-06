@@ -3,6 +3,19 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { Prisma } from '@prisma/client'
+
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
 
 // GET /api/users/[id] - Get user by ID
 export async function GET(
@@ -10,14 +23,18 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!session || ((session as any).user as any).role !== 'SUPER_ADMIN' && ((session as any).user as any).role !== 'ADMIN') {
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     const prisma = createPrismaClient()
-    const user = await withRetry(() => prisma.user.findUnique({
+    const userData = await withRetry(() => prisma.user.findUnique({
       where: { id: params.id },
       select: {
         id: true,
@@ -30,11 +47,11 @@ export async function GET(
       }
     }))
 
-    if (!user) {
+    if (!userData) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json(user)
+    return NextResponse.json(userData)
   } catch (error) {
     console.error('Error fetching user:', error)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
@@ -47,9 +64,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!session || ((session as any).user as any).role !== 'SUPER_ADMIN') {
+    const sessionUser = session.user
+    if (sessionUser.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -78,7 +99,7 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {}
+    const updateData: Prisma.UserUpdateInput & { password?: string } = {}
     if (email) updateData.email = email
     if (name) updateData.name = name
     if (role) updateData.role = role
@@ -114,9 +135,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!session || ((session as any).user as any).role !== 'SUPER_ADMIN') {
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 

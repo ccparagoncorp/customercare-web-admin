@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import sopContent from "@/content/sop.json"
 import { Button } from "@/components/ui/button"
@@ -10,11 +10,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface KategoriSOP {
+  id: string
+  name: string
+  description?: string
+}
+
 export default function EditKategoriSOP({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [kategoriSOP, setKategoriSOP] = useState<any>(null)
+  const [kategoriSOP, setKategoriSOP] = useState<KategoriSOP | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: ''
@@ -22,27 +36,11 @@ export default function EditKategoriSOP({ params }: { params: Promise<{ id: stri
 
   const resolvedParams = use(params)
 
-  useEffect(() => {
-    if (status === 'loading') return
-
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    if ((session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
-      router.push('/login')
-      return
-    }
-
-    fetchData()
-  }, [session, status, router, resolvedParams.id])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const response = await fetch(`/api/kategori-sop/${resolvedParams.id}`)
       if (response.ok) {
-        const data = await response.json()
+        const data: KategoriSOP = await response.json()
         setKategoriSOP(data)
         setFormData({
           name: data.name,
@@ -55,7 +53,24 @@ export default function EditKategoriSOP({ params }: { params: Promise<{ id: stri
       console.error('Error fetching data:', error)
       router.push('/admin/sop')
     }
-  }
+  }, [resolvedParams.id, router])
+
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
+    const user = session.user as UserWithRole
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      router.push('/login')
+      return
+    }
+
+    fetchData()
+  }, [session, status, router, fetchData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

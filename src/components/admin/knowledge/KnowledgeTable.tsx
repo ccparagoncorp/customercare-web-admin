@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Trash2, Eye, X, BookOpen, Pencil } from "lucide-react"
+import { Plus, Search, Trash2, X, BookOpen, Pencil } from "lucide-react"
 // AddKnowledgeModal removed; use dedicated pages instead
 import knowledgeContent from "@/content/knowledge.json"
 
@@ -29,7 +30,6 @@ interface DetailKnowledge {
 export function KnowledgeTable() {
   const [knowledge, setKnowledge] = useState<Knowledge[]>([])
   const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   // const [showAddModal, setShowAddModal] = useState(false)
@@ -41,7 +41,6 @@ export function KnowledgeTable() {
   })
 
   const { table, addButton, searchPlaceholder } = knowledgeContent
-  const [editing, setEditing] = useState<Knowledge | null>(null)
 
   // Fetch knowledge data with caching
   const fetchKnowledge = useCallback(async () => {
@@ -85,17 +84,12 @@ export function KnowledgeTable() {
 
   // Debounce search term - only search after user stops typing for 1 second
   useEffect(() => {
-    if (searchTerm !== debouncedSearchTerm) {
-      setSearching(true)
-    }
-    
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
     }, 1000) // 1 second delay - only search when user stops typing
 
     return () => clearTimeout(timer)
-  }, [searchTerm, debouncedSearchTerm])
+  }, [searchTerm])
 
   useEffect(() => {
     fetchKnowledge()
@@ -109,7 +103,6 @@ export function KnowledgeTable() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       setDebouncedSearchTerm(searchTerm)
-      setSearching(false)
     }
   }
 
@@ -148,14 +141,6 @@ export function KnowledgeTable() {
 
   const getDetailCount = (details: DetailKnowledge[]) => {
     return details.length
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
   }
 
   return (
@@ -252,10 +237,13 @@ export function KnowledgeTable() {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {item.logos && item.logos.length ? (
-                            <img
+                            <Image
                               src={item.logos[0]}
                               alt={item.title}
+                              width={40}
+                              height={40}
                               className="h-10 w-10 rounded-full object-cover"
+                              unoptimized
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-[#03438f] flex items-center justify-center">

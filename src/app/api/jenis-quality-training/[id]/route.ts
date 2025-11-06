@@ -3,13 +3,48 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
+interface SubdetailInput {
+  name: string
+  description: string
+  updatedBy?: string
+  updateNotes?: string
+  logos?: string[]
+}
+
+interface DetailInput {
+  name: string
+  description: string
+  linkslide?: string
+  updatedBy?: string
+  updateNotes?: string
+  logos?: string[]
+  subdetails?: SubdetailInput[]
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { id } = await params
@@ -36,10 +71,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const body = await request.json()
     const { name, description, logos = [], qualityTrainingId, details = [], updatedBy, updateNotes } = body
@@ -57,7 +98,7 @@ export async function PUT(
 
     // Recreate details + subdetails if provided
     if (details && details.length > 0) {
-      for (const d of details as any[]) {
+      for (const d of details as DetailInput[]) {
         const createdDetail = await withRetry(() => prisma.detailQualityTraining.create({
           data: {
             name: d.name,
@@ -71,7 +112,7 @@ export async function PUT(
         }))
         if (d.subdetails && d.subdetails.length > 0) {
           await withRetry(() => prisma.subdetailQualityTraining.createMany({
-            data: d.subdetails.map((s: any) => ({
+            data: d.subdetails.map((s: SubdetailInput) => ({
               name: s.name,
               description: s.description,
               updatedBy: s.updatedBy,
@@ -103,8 +144,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'SUPER_ADMIN' && (session.user as any)?.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { id } = await params

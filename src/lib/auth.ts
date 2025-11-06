@@ -98,8 +98,23 @@ export const authOptions: NextAuthOptions = {
   }
 }
 
+interface RequestWithSession {
+  session?: {
+    user?: {
+      role?: string
+    }
+  }
+}
+
+interface Response {
+  status: (code: number) => Response
+  json: (data: { message: string }) => void
+}
+
+type NextFunction = () => void
+
 export function requireRole(role: string) {
-  return (req: any, res: any, next: any) => {
+  return (req: RequestWithSession, res: Response, next: NextFunction) => {
     if (!req.session?.user) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
@@ -110,7 +125,7 @@ export function requireRole(role: string) {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
-    if (role === 'ADMIN' && !['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+    if (role === 'ADMIN' && !['SUPER_ADMIN', 'ADMIN'].includes(userRole || '')) {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
