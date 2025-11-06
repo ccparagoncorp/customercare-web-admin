@@ -13,6 +13,14 @@ interface User {
   createdAt: string
 }
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 export default function UsersPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -22,12 +30,13 @@ export default function UsersPage() {
   useEffect(() => {
     if (status === 'loading') return
 
-    if (!session) {
+    if (!session || !session.user) {
       router.push('/login')
       return
     }
 
-    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
+    const user = session.user as UserWithRole
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       router.push('/agent/dashboard')
       return
     }
