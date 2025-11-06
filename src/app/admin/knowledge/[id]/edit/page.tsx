@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Upload, Plus, Trash2 } from 'lucide-react'
-// import Image from 'next/image'
+import Image from 'next/image'
 
 interface UserWithRole {
   id: string
@@ -46,6 +46,7 @@ interface KnowledgeData {
 // Component untuk menangani error loading gambar (tanpa console log)
 function ImageWithFallback({ src, alt, className, onError }: { src: string, alt: string, className: string, onError: () => void }) {
   const [hasError, setHasError] = useState(false)
+  
   if (hasError || !src) {
     return (
       <div className={`${className} bg-gray-200 flex items-center justify-center rounded border`}>
@@ -60,13 +61,24 @@ function ImageWithFallback({ src, alt, className, onError }: { src: string, alt:
   }
   
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-      onError={() => { setHasError(true); onError() }}
-      style={{ maxWidth: '100%', height: 'auto' }}
-    />
+    <div className={className} style={{ position: 'relative', width: '100%', height: 'auto' }}>
+      <Image
+        src={src}
+        alt={alt}
+        width={400}
+        height={300}
+        className="w-full h-auto object-contain rounded border"
+        style={{ maxWidth: '100%', height: 'auto' }}
+        unoptimized
+        onLoadingComplete={() => {
+          // Image loaded successfully
+        }}
+        onError={() => {
+          setHasError(true)
+          onError()
+        }}
+      />
+    </div>
   )
 }
 
@@ -86,7 +98,6 @@ export default function EditKnowledgePage() {
   const [removedDetailLogos, setRemovedDetailLogos] = useState<Array<{ detailId: string, logos: string[] }>>([])
   const [removedJenisLogos, setRemovedJenisLogos] = useState<Array<{ jenisId: string, logos: string[] }>>([])
   const [removedProdukLogos, setRemovedProdukLogos] = useState<Array<{ produkId: string, logos: string[] }>>([])
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [details, setDetails] = useState<Array<{ 
     id: string; 
     name: string; 
@@ -396,7 +407,7 @@ export default function EditKnowledgePage() {
                         src={u}
                         alt="Preview"
                         className="w-full h-auto object-contain rounded border"
-                        onError={() => setImageErrors(prev => new Set([...prev, u]))}
+                        onError={() => {}}
                       />
                       <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
                         <button
@@ -500,7 +511,7 @@ export default function EditKnowledgePage() {
                               src={logoUrl}
                               alt="Preview"
                               className="w-full h-auto object-contain rounded border"
-                              onError={() => setImageErrors(prev => new Set([...prev, logoUrl]))}
+                              onError={() => {}}
                             />
                             <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
                             <button
@@ -606,7 +617,7 @@ export default function EditKnowledgePage() {
                                         src={logoUrl}
                                         alt="Preview"
                                         className="w-full h-auto object-contain rounded border"
-                                        onError={() => setImageErrors(prev => new Set([...prev, logoUrl]))}
+                                        onError={() => {}}
                                       />
                                       <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
                                         <button
@@ -717,7 +728,7 @@ export default function EditKnowledgePage() {
                                                 src={logoUrl}
                                                 alt="Preview"
                                                 className="w-full h-auto object-contain rounded border"
-                                                onError={() => setImageErrors(prev => new Set([...prev, logoUrl]))}
+                                                onError={() => {}}
                                               />
                                               <div className="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-200 rounded flex items-center justify-center">
                                                 <button

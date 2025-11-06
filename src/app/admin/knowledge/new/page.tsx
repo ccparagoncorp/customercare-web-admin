@@ -358,7 +358,7 @@ export default function NewKnowledgePage() {
               </Button>
             </div>
             {details.length === 0 && (
-              <p className="text-sm text-gray-500">Belum ada detail. Klik "Tambah Detail" untuk menambahkan.</p>
+              <p className="text-sm text-gray-500">Belum ada detail. Klik &quot;Tambah Detail&quot; untuk menambahkan.</p>
             )}
             <div className="grid grid-cols-1 gap-4">
               {details.map((d, i) => (

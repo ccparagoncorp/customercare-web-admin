@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { UserRole } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
