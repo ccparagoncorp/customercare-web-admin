@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
