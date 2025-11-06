@@ -4,6 +4,14 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
+interface UserWithRole {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
 export default function Home() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -11,13 +19,14 @@ export default function Home() {
   useEffect(() => {
     if (status === 'loading') return // Still loading
 
-    if (!session) {
+    if (!session || !session.user) {
       router.push('/login')
       return
     }
 
+    const user = session.user as UserWithRole
     // Redirect based on role
-    if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'ADMIN') {
+    if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
       router.push('/admin/dashboard')
     } else {
       router.push('/agent/dashboard')
