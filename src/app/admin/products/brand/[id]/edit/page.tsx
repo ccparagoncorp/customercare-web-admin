@@ -56,7 +56,8 @@ export default function EditBrand({ params }: { params: Promise<{ id: string }> 
           description: brandData.description || '',
           images: brandData.images || [],
           link_sampul: brandData.link_sampul || '',
-          colorbase: brandData.colorbase || '#03438f'
+          colorbase: brandData.colorbase || '#03438f',
+          updateNotes: ''
         })
       } else {
         router.push('/admin/products')
