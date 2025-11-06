@@ -20,9 +20,10 @@ interface Session {
 // GET /api/users/[id] - Get user by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions) as Session | null
     if (!session || !session.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -35,7 +36,7 @@ export async function GET(
 
     const prisma = createPrismaClient()
     const userData = await withRetry(() => prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -61,9 +62,10 @@ export async function GET(
 // PUT /api/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions) as Session | null
     if (!session || !session.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -80,7 +82,7 @@ export async function PUT(
     
     // Check if user exists
     const existingUser = await withRetry(() => prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     }))
 
     if (!existingUser) {
@@ -109,7 +111,7 @@ export async function PUT(
     }
 
     const user = await withRetry(() => prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -132,9 +134,10 @@ export async function PUT(
 // DELETE /api/users/[id] - Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions) as Session | null
     if (!session || !session.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -149,7 +152,7 @@ export async function DELETE(
     
     // Check if user exists
     const existingUser = await withRetry(() => prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     }))
 
     if (!existingUser) {
@@ -162,7 +165,7 @@ export async function DELETE(
     }
 
     await withRetry(() => prisma.user.delete({
-      where: { id: params.id }
+      where: { id }
     }))
 
     return NextResponse.json({ message: 'User deleted successfully' })
