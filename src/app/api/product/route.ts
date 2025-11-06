@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, ProductStatus } from '@prisma/client'
 
 interface SessionUser {
   id: string
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         kapasitas,
-        status: status || 'ACTIVE',
+        status: (status as ProductStatus) || ProductStatus.ACTIVE,
         harga: harga ?? undefined,
         images,
         subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
+import { ProductStatus } from '@prisma/client'
 
 interface SessionUser {
   id: string
@@ -141,7 +142,7 @@ export async function PUT(
         name,
         description,
         kapasitas,
-        status: status || 'ACTIVE',
+        status: (status as ProductStatus) || ProductStatus.ACTIVE,
         harga: harga ?? undefined,
         images,
         subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
