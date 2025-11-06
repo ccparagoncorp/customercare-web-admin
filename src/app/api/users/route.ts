@@ -4,12 +4,29 @@ import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+interface SessionUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  image?: string | null
+}
+
+interface Session {
+  user: SessionUser
+}
+
 // GET /api/users - Get all users
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
 
-    if (!session || (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN')) {
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -39,9 +56,14 @@ export async function GET() {
 // POST /api/users - Create new user
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as Session | null
 
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
