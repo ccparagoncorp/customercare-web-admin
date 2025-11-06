@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import sopContent from "@/content/sop.json"
 import { FileText, FolderTree, FileCheck, Plus, Edit, Trash2, Search, X, LucideIcon } from "lucide-react"
@@ -45,7 +45,7 @@ interface JenisSOP {
   updatedAt: string
 }
 
-export default function SOPManagement() {
+function SOPManagementContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -773,3 +773,14 @@ export default function SOPManagement() {
   )
 }
 
+export default function SOPManagement() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
+      </div>
+    }>
+      <SOPManagementContent />
+    </Suspense>
+  )
+}
