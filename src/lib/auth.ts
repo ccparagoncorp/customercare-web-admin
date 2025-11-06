@@ -24,6 +24,7 @@ interface SessionUser {
 
 interface SessionData {
   user: SessionUser
+  expires: string
 }
 
 export const authOptions = {
@@ -112,13 +113,12 @@ export const authOptions = {
       return typedToken
     },
     async session({ session, token }) {
-      const typedSession = session as SessionData
       const typedToken = token as JWTToken
-      if (typedToken && typedSession.user) {
-        typedSession.user.id = typedToken.sub || ''
-        typedSession.user.role = typedToken.role || ''
+      if (typedToken && session.user) {
+        session.user.id = typedToken.sub || ''
+        session.user.role = typedToken.role || ''
       }
-      return typedSession
+      return session
     }
   },
   pages: {
