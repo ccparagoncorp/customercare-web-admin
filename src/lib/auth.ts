@@ -104,7 +104,8 @@ export const authOptions = {
     strategy: 'jwt' as const
   },
   callbacks: {
-    async jwt({ token, user }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async jwt({ token, user }: { token: any; user?: any }) {
       const typedToken = token as JWTToken
       if (user) {
         const typedUser = user as JWTUser
@@ -112,7 +113,8 @@ export const authOptions = {
       }
       return typedToken
     },
-    async session({ session, token }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async session({ session, token }: { session: any; token: any }) {
       const typedToken = token as JWTToken
       if (typedToken && session.user) {
         session.user.id = typedToken.sub || ''
