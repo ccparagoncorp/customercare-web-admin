@@ -178,7 +178,7 @@ export async function DELETE(
         }
       }))
 
-      if (categoryWithSubcategories?.subkategoriProduks.length > 0) {
+      if (categoryWithSubcategories && categoryWithSubcategories.subkategoriProduks && categoryWithSubcategories.subkategoriProduks.length > 0) {
         return NextResponse.json({ 
           error: 'Cannot delete category with associated subcategories' 
         }, { status: 400 })
