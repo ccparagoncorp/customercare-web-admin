@@ -22,11 +22,6 @@ interface SessionUser {
   image?: string | null
 }
 
-interface SessionData {
-  user: SessionUser
-  expires: string
-}
-
 export const authOptions = {
   providers: [
     CredentialsProvider({

@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
@@ -77,7 +77,7 @@ interface ProductDetail {
   images: string[]
 }
 
-export default function ProductManagement() {
+function ProductManagementContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -1137,5 +1137,17 @@ export default function ProductManagement() {
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+export default function ProductManagement() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
+      </div>
+    }>
+      <ProductManagementContent />
+    </Suspense>
   )
 }
