@@ -51,10 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (categoryId) {
-      where.subkategoriProduk = {
-        ...where.subkategoriProduk,
-        kategoriProdukId: categoryId
-      }
+      where.categoryId = categoryId
     }
 
     if (subcategoryId) {
