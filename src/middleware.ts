@@ -3,10 +3,8 @@ import { NextResponse } from 'next/server'
 
 export default withAuth(
   function middleware(req) {
-    // If user is not authenticated and trying to access protected routes
-    if (!req.nextauth.token && req.nextUrl.pathname.startsWith('/admin')) {
-      return NextResponse.redirect(new URL('/login', req.url))
-    }
+    // Middleware hanya perlu memastikan authorized callback bekerja
+    // withAuth sudah handle redirect otomatis jika tidak authorized
   },
   {
     callbacks: {
@@ -24,12 +22,16 @@ export default withAuth(
         // Allow other routes
         return true
       }
+    },
+    pages: {
+      signIn: '/login'
     }
   }
 )
 
 export const config = {
   matcher: [
-    '/admin/:path*'
+    '/admin/:path*',
+    '/login'
   ]
 }

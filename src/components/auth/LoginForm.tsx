@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Lock, User, Key, ArrowRight, Eye, EyeOff } from "lucide-react"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
 import authContent from "@/content/auth.json"
 
 const { login } = authContent
@@ -25,6 +26,8 @@ export function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   const {
     register,
@@ -39,23 +42,55 @@ export function LoginForm() {
     setError("")
 
     try {
+      const callbackUrlParam = searchParams.get('callbackUrl')
+      let callbackUrl = '/admin/dashboard'
+      
+      if (callbackUrlParam) {
+        try {
+          // Decode URL jika perlu
+          const decodedUrl = decodeURIComponent(callbackUrlParam)
+          // Extract path dari full URL jika ada
+          try {
+            const urlObj = new URL(decodedUrl)
+            callbackUrl = urlObj.pathname || '/admin/dashboard'
+          } catch {
+            // Jika bukan full URL, gunakan sebagai path langsung
+            callbackUrl = decodedUrl.startsWith('/') ? decodedUrl : '/admin/dashboard'
+          }
+        } catch {
+          // Jika decode gagal, gunakan langsung
+          callbackUrl = callbackUrlParam.startsWith('/') ? callbackUrlParam : '/admin/dashboard'
+        }
+      }
+      
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
-        redirect: false,
-        callbackUrl: '/admin/dashboard'
+        redirect: false
       })
 
       if (result?.error) {
         setError(login.messages.loginError)
+        setIsLoading(false)
       } else if (result?.ok) {
-        // Login berhasil, redirect berdasarkan role
-        window.location.href = "/admin/dashboard"
+        // Login berhasil, tunggu session ter-update kemudian redirect
+        // Poll untuk memastikan session sudah ter-set
+        let attempts = 0
+        const checkSession = async () => {
+          const session = await getSession()
+          if (session || attempts >= 10) {
+            // Session sudah ter-set atau sudah max attempts
+            window.location.href = callbackUrl
+          } else {
+            attempts++
+            setTimeout(checkSession, 100)
+          }
+        }
+        checkSession()
       }
     } catch (err) {
       console.error('Login error:', err)
       setError(login.messages.generalError)
-    } finally {
       setIsLoading(false)
     }
   }
