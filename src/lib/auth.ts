@@ -1,6 +1,31 @@
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { supabaseAdmin } from './supabase'
 
+interface JWTToken {
+  sub?: string
+  role?: string
+  [key: string]: unknown
+}
+
+interface JWTUser {
+  id: string
+  email: string
+  name: string
+  role: string
+}
+
+interface SessionUser {
+  id: string
+  role: string
+  email?: string
+  name?: string
+  image?: string | null
+}
+
+interface SessionData {
+  user: SessionUser
+}
+
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -78,18 +103,22 @@ export const authOptions = {
     strategy: 'jwt' as const
   },
   callbacks: {
-    async jwt({ token, user }: { token: any; user?: any }) {
+    async jwt({ token, user }) {
+      const typedToken = token as JWTToken
       if (user) {
-        token.role = user.role
+        const typedUser = user as JWTUser
+        typedToken.role = typedUser.role
       }
-      return token
+      return typedToken
     },
-    async session({ session, token }: { session: any; token: any }) {
-      if (token) {
-        session.user.id = token.sub!
-        session.user.role = token.role as string
+    async session({ session, token }) {
+      const typedSession = session as SessionData
+      const typedToken = token as JWTToken
+      if (typedToken && typedSession.user) {
+        typedSession.user.id = typedToken.sub || ''
+        typedSession.user.role = typedToken.role || ''
       }
-      return session
+      return typedSession
     }
   },
   pages: {
