@@ -32,23 +32,23 @@ export async function POST(
 
     const { id } = await params
     const body = await request.json()
-    const { name, value, images = [] } = body
+    const { name, detail, images = [] } = body
 
-    if (!name || !value) {
-      return NextResponse.json({ error: 'Name and value are required' }, { status: 400 })
+    if (!name || !detail) {
+      return NextResponse.json({ error: 'Name and detail are required' }, { status: 400 })
     }
 
     const prisma = createPrismaClient()
-    const detail = await withRetry(() => prisma.detailProduk.create({
+    const detailProduk = await withRetry(() => prisma.detailProduk.create({
       data: {
         name,
-        value,
+        detail,
         images,
         produkId: id
       }
     }))
 
-    return NextResponse.json(detail, { status: 201 })
+    return NextResponse.json(detailProduk, { status: 201 })
   } catch (error) {
     console.error('Error creating product detail:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
