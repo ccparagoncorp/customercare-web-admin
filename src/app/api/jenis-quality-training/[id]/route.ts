@@ -111,8 +111,9 @@ export async function PUT(
           }
         }))
         if (d.subdetails && d.subdetails.length > 0) {
+          const subdetailsArray = d.subdetails as SubdetailInput[]
           await withRetry(() => prisma.subdetailQualityTraining.createMany({
-            data: d.subdetails.map((s: SubdetailInput) => ({
+            data: subdetailsArray.map((s: SubdetailInput) => ({
               name: s.name,
               description: s.description,
               updatedBy: s.updatedBy,
