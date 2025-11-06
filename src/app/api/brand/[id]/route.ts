@@ -130,7 +130,7 @@ export async function DELETE(
       }
     }))
 
-    if (brandWithCategories?.kategoriProduks.length > 0) {
+    if (brandWithCategories && brandWithCategories.kategoriProduks && brandWithCategories.kategoriProduks.length > 0) {
       return NextResponse.json({ 
         error: 'Cannot delete brand with associated categories' 
       }, { status: 400 })
