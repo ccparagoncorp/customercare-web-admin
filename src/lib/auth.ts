@@ -56,7 +56,7 @@ export const authOptions = {
             role: userData.role
           }
         } catch (error) {
-          console.error('Supabase connection error, using local fallback:', error.message)
+          console.error('Supabase connection error, using local fallback:', error instanceof Error ? error.message : 'Unknown error')
           
           // Fallback: Check against hardcoded super admin
           if (credentials.email === process.env.SUPER_ADMIN_EMAIL && 
