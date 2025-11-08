@@ -100,7 +100,7 @@ export async function setAuditUser(prisma: PrismaClient, userId: string) {
 export async function withAuditUser<T>(
   prisma: PrismaClient,
   userId: string,
-  operation: (tx: PrismaClient) => Promise<T>
+  operation: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>) => Promise<T>
 ): Promise<T> {
   // Escape user ID untuk mencegah SQL injection
   const escapedUserId = userId.replace(/'/g, "''")
