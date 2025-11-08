@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
-import { Search, Bell, Settings, User } from "lucide-react"
+import { Search, Settings, User, X } from "lucide-react"
 import navigationContent from "@/content/navigation.json"
+import { NotificationBell } from "./NotificationBell"
+import { SearchDropdown } from "./SearchDropdown"
 
 interface UserWithRole {
   name?: string | null
@@ -16,6 +18,9 @@ export function Header() {
   const { data: session } = useSession()
   const { header } = navigationContent
   const [sidebarWidth, setSidebarWidth] = useState(64) // Default width when sidebar is collapsed
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleMouseEnter = () => setSidebarWidth(256) // 64 * 4 = 256px (w-64)
@@ -43,13 +48,39 @@ export function Header() {
     >
       <div></div>
       {/* Left side - Search */}
-      <div className="flex-1 max-w-sm">
+      <div className="flex-1 max-w-sm" ref={searchContainerRef}>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
           <input
             type="text"
             placeholder={header.searchPlaceholder}
-            className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#03438f] focus:border-transparent"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setIsSearchOpen(true)
+            }}
+            onFocus={() => {
+              if (searchQuery.trim().length >= 2) {
+                setIsSearchOpen(true)
+              }
+            }}
+            className="w-full pl-7 pr-8 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#03438f] focus:border-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setIsSearchOpen(false)
+              }}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+            >
+              <X className="h-3 w-3 text-gray-400" />
+            </button>
+          )}
+          <SearchDropdown
+            isOpen={isSearchOpen && searchQuery.trim().length >= 2}
+            onClose={() => setIsSearchOpen(false)}
+            query={searchQuery}
           />
         </div>
       </div>
@@ -57,10 +88,7 @@ export function Header() {
       {/* Right side - User actions */}
       <div className="flex items-center space-x-2">
         {/* Notifications */}
-        <button className="relative p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 bg-red-500 rounded-full"></span>
-        </button>
+        <NotificationBell />
 
         {/* Settings */}
         <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { Prisma, ProductStatus } from '@prisma/client'
 
 interface SessionUser {
@@ -131,39 +131,41 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-    const product = await withRetry(() => prisma.produk.create({
-      data: {
-        name,
-        description,
-        kapasitas,
-        status: (status as ProductStatus) || ProductStatus.ACTIVE,
-        harga: harga ?? undefined,
-        images,
-        subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
-        categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
-        createdBy: user.email || 'system',
-        detailProduks: {
-          create: (details as DetailInput[]).map((detail: DetailInput) => ({
-            name: detail.name,
-            detail: detail.detail,
-            images: detail.images || []
-          }))
-        }
-      },
-      include: {
-        subkategoriProduk: {
-          include: {
-            kategoriProduk: {
-              include: {
-                brand: true
-              }
-            }
+    const product = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.produk.create({
+        data: {
+          name,
+          description,
+          kapasitas,
+          status: (status as ProductStatus) || ProductStatus.ACTIVE,
+          harga: harga ?? undefined,
+          images,
+          subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
+          categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
+          createdBy: user.email || 'system',
+          detailProduks: {
+            create: (details as DetailInput[]).map((detail: DetailInput) => ({
+              name: detail.name,
+              detail: detail.detail,
+              images: detail.images || []
+            }))
           }
         },
-        kategoriProduk: true,
-        detailProduks: true
-      }
-    }))
+        include: {
+          subkategoriProduk: {
+            include: {
+              kategoriProduk: {
+                include: {
+                  brand: true
+                }
+              }
+            }
+          },
+          kategoriProduk: true,
+          detailProduks: true
+        }
+      })
+    })
 
     return NextResponse.json(product, { status: 201 })
   } catch (error) {

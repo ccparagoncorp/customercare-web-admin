@@ -313,3 +313,21 @@ model SubdetailQualityTraining {
 
   @@map("subdetail_quality_trainings")
 }
+
+model TracerUpdate {
+  id          String   @id @default(cuid())
+  sourceTable String   @map("source_table")
+  sourceKey   String   @map("source_key")
+  fieldName   String   @map("field_name")
+  oldValue    String?  @db.Text @map("old_value")
+  newValue    String?  @db.Text @map("new_value")
+  actionType  String   @map("action_type") // INSERT, UPDATE, DELETE
+  changedAt   DateTime @default(now()) @map("changed_at")
+  changedBy   String?  @map("changed_by")
+
+  @@index([sourceTable])
+  @@index([sourceKey])
+  @@index([actionType])
+  @@index([changedAt])
+  @@map("tracer_updates")
+}

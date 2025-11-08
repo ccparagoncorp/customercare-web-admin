@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
 import { ProductStatus } from '@prisma/client'
 
@@ -55,35 +55,52 @@ export async function GET(
     const { id } = await params
 
     const prisma = createPrismaClient()
-    const product = await withRetry(() => prisma.produk.findUnique({
-      where: { id },
-      include: {
-        subkategoriProduk: {
-          include: {
-            kategoriProduk: {
-              include: {
-                brand: true
+    try {
+      const product = await withRetry(() => prisma.produk.findUnique({
+        where: { id },
+        include: {
+          subkategoriProduk: {
+            include: {
+              kategoriProduk: {
+                include: {
+                  brand: true
+                }
               }
             }
-          }
-        },
-        kategoriProduk: {
-          include: {
-            brand: true
-          }
-        },
-        detailProduks: true
+          },
+          kategoriProduk: {
+            include: {
+              brand: true
+            }
+          },
+          detailProduks: true
+        }
+      }))
+
+      if (!product) {
+        return NextResponse.json({ error: 'Product not found' }, { status: 404 })
       }
-    }))
 
-    if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+      return NextResponse.json(product)
+    } finally {
+      await prisma.$disconnect()
     }
-
-    return NextResponse.json(product)
   } catch (error) {
     console.error('Error fetching product:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    
+    // Check if it's a database connection error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    if (errorMessage.includes("Can't reach database") || 
+        errorMessage.includes("database server") ||
+        errorMessage.includes("connection")) {
+      return NextResponse.json({ 
+        error: 'Database connection error. Please check your database connection and DATABASE_URL environment variable.' 
+      }, { status: 503 })
+    }
+    
+    return NextResponse.json({ 
+      error: errorMessage.includes('Product not found') ? 'Product not found' : 'Error fetching product' 
+    }, { status: 500 })
   }
 }
 
@@ -135,40 +152,44 @@ export async function PUT(
 
     const prisma = createPrismaClient()
     
-    // Update product
-    await withRetry(() => prisma.produk.update({
-      where: { id },
-      data: {
-        name,
-        description,
-        kapasitas,
-        status: (status as ProductStatus) || ProductStatus.ACTIVE,
-        harga: harga ?? undefined,
-        images,
-        subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
-        categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
-        updatedBy,
-        updateNotes
+    // Update product with audit tracking
+    // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
+    await withAuditUser(prisma, user.id, async (tx) => {
+      // Update product
+      await tx.produk.update({
+        where: { id },
+        data: {
+          name,
+          description,
+          kapasitas,
+          status: (status as ProductStatus) || ProductStatus.ACTIVE,
+          harga: harga ?? undefined,
+          images,
+          subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
+          categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
+          updatedBy,
+          updateNotes
+        }
+      })
+
+      // Update details
+      if (details.length > 0) {
+        // Delete existing details
+        await tx.detailProduk.deleteMany({
+          where: { produkId: id }
+        })
+
+        // Create new details
+        await tx.detailProduk.createMany({
+          data: (details as DetailInput[]).map((detail: DetailInput) => ({
+            name: detail.name,
+            detail: detail.detail,
+            images: detail.images || [],
+            produkId: id
+          }))
+        })
       }
-    }))
-
-    // Update details
-    if (details.length > 0) {
-      // Delete existing details
-      await withRetry(() => prisma.detailProduk.deleteMany({
-        where: { produkId: id }
-      }))
-
-      // Create new details
-      await withRetry(() => prisma.detailProduk.createMany({
-        data: (details as DetailInput[]).map((detail: DetailInput) => ({
-          name: detail.name,
-          detail: detail.detail,
-          images: detail.images || [],
-          produkId: id
-        }))
-      }))
-    }
+    })
 
     const updatedProduct = await withRetry(() => prisma.produk.findUnique({
       where: { id },
@@ -249,9 +270,11 @@ export async function DELETE(
       }
     }
 
-    await withRetry(() => prisma.produk.delete({
-      where: { id }
-    }))
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.produk.delete({
+        where: { id }
+      })
+    })
 
     return NextResponse.json({ message: 'Product deleted successfully' })
   } catch (error) {

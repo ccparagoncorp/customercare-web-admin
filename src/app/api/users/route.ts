@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -83,23 +83,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'User already exists' }, { status: 400 })
     }
 
-    // Create user
-    const newUser = await withRetry(() => prisma.user.create({
-      data: {
-        email,
-        name,
-        role,
-        isActive: true
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true
-      }
-    }))
+    // Create user with audit tracking
+    const newUser = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.user.create({
+        data: {
+          email,
+          name,
+          role,
+          isActive: true
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+          createdAt: true
+        }
+      }))
+    })
 
     return NextResponse.json(newUser, { status: 201 })
   } catch (error) {

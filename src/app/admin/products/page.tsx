@@ -6,7 +6,7 @@ import { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import productContent from "@/content/product.json"
-import { Package, Tag, Layers, Plus, Edit, Trash2, Search, X } from "lucide-react"
+import { Package, Tag, Layers, Plus, Edit, Trash2, Search, X, History } from "lucide-react"
 
 interface UserWithRole {
   id: string
@@ -286,9 +286,19 @@ function ProductManagementContent() {
               <h1 className="text-3xl font-bold mb-2">{productContent.title}</h1>
               <p className="text-blue-100 text-lg">Kelola data produk, brand, dan kategori</p>
             </div>
-            <div className="hidden md:block">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                <Package className="h-8 w-8" />
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.push('/admin/products/tracker')}
+                className="hidden md:flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                title="Lihat Audit Log"
+              >
+                <History className="h-5 w-5" />
+                <span>Audit Log</span>
+              </button>
+              <div className="hidden md:block">
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <Package className="h-8 w-8" />
+                </div>
               </div>
             </div>
           </div>

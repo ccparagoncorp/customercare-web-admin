@@ -9,8 +9,9 @@
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "setup:buckets": "node scripts/setup-buckets.js"
+    "db:seed": "ts-node --project tsconfig.scripts.json prisma/seed.ts",
+    "setup:audit": "ts-node --project tsconfig.scripts.json scripts/setup-audit-triggers.ts",
+    "check:audit": "ts-node --project tsconfig.scripts.json scripts/check-audit-triggers.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -22,6 +23,7 @@
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.468.0",
     "next": "15.5.4",

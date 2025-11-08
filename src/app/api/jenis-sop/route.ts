@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -77,29 +77,31 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-    const jenisSOP = await withRetry(() => prisma.jenisSOP.create({
-      data: {
-        name,
-        content,
-        images,
-        sopId,
-        createdBy: user.email || 'system',
-        detailSOPs: {
-          create: (details as DetailInput[]).map((detail: DetailInput) => ({
-            name: detail.name,
-            value: detail.value
-          }))
-        }
-      },
-      include: {
-        sop: {
-          include: {
-            kategoriSOP: true
+    const jenisSOP = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.jenisSOP.create({
+        data: {
+          name,
+          content,
+          images,
+          sopId,
+          createdBy: user.email || 'system',
+          detailSOPs: {
+            create: (details as DetailInput[]).map((detail: DetailInput) => ({
+              name: detail.name,
+              value: detail.value
+            }))
           }
         },
-        detailSOPs: true
-      }
-    }))
+        include: {
+          sop: {
+            include: {
+              kategoriSOP: true
+            }
+          },
+          detailSOPs: true
+        }
+      }))
+    })
 
     return NextResponse.json(jenisSOP, { status: 201 })
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -89,15 +89,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Brand is required for category' }, { status: 400 })
       }
 
-      const category = await withRetry(() => prisma.kategoriProduk.create({
-        data: {
-          name,
-          description,
-          images,
-          brandId,
-          createdBy: user.email || 'system'
-        }
-      }))
+      const category = await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.kategoriProduk.create({
+          data: {
+            name,
+            description,
+            images,
+            brandId,
+            createdBy: user.email || 'system'
+          }
+        })
+      })
 
       return NextResponse.json(category, { status: 201 })
     } else if (type === 'subcategory') {
@@ -105,15 +107,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Parent category is required for subcategory' }, { status: 400 })
       }
 
-      const subcategory = await withRetry(() => prisma.subkategoriProduk.create({
-        data: {
-          name,
-          description,
-          images,
-          kategoriProdukId: parentCategoryId,
-          createdBy: user.email || 'system'
-        }
-      }))
+      const subcategory = await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.subkategoriProduk.create({
+          data: {
+            name,
+            description,
+            images,
+            kategoriProdukId: parentCategoryId,
+            createdBy: user.email || 'system'
+          }
+        })
+      })
 
       return NextResponse.json(subcategory, { status: 201 })
     }

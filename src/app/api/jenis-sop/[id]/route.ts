@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -95,35 +95,38 @@ export async function PUT(
 
     const prisma = createPrismaClient()
     
-    // Update Jenis SOP
-    await withRetry(() => prisma.jenisSOP.update({
-      where: { id },
-      data: {
-        name,
-        content,
-        images,
-        sopId,
-        updatedBy,
-        updateNotes
-      }
-    }))
-
-    // Update details
-    if (details.length > 0) {
-      // Delete existing details
-      await withRetry(() => prisma.detailSOP.deleteMany({
-        where: { jenisSOPId: id }
+    // Update Jenis SOP with audit tracking
+    await withAuditUser(prisma, user.id, async () => {
+      // Update Jenis SOP
+      await withRetry(() => prisma.jenisSOP.update({
+        where: { id },
+        data: {
+          name,
+          content,
+          images,
+          sopId,
+          updatedBy,
+          updateNotes
+        }
       }))
 
-      // Create new details
-      await withRetry(() => prisma.detailSOP.createMany({
-        data: (details as DetailInput[]).map((detail: DetailInput) => ({
-          name: detail.name,
-          value: detail.value,
-          jenisSOPId: id
+      // Update details
+      if (details.length > 0) {
+        // Delete existing details
+        await withRetry(() => prisma.detailSOP.deleteMany({
+          where: { jenisSOPId: id }
         }))
-      }))
-    }
+
+        // Create new details
+        await withRetry(() => prisma.detailSOP.createMany({
+          data: (details as DetailInput[]).map((detail: DetailInput) => ({
+            name: detail.name,
+            value: detail.value,
+            jenisSOPId: id
+          }))
+        }))
+      }
+    })
 
     const updatedJenisSOP = await withRetry(() => prisma.jenisSOP.findUnique({
       where: { id },
@@ -162,9 +165,11 @@ export async function DELETE(
     const { id } = await params
 
     const prisma = createPrismaClient()
-    await withRetry(() => prisma.jenisSOP.delete({
-      where: { id }
-    }))
+    await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.jenisSOP.delete({
+        where: { id }
+      }))
+    })
 
     return NextResponse.json({ message: 'Jenis SOP deleted successfully' })
   } catch (error) {

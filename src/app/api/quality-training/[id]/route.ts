@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -62,10 +62,12 @@ export async function PUT(
     const { title, description, logos = [], updatedBy, updateNotes } = body
     if (!title) return NextResponse.json({ error: 'Title is required' }, { status: 400 })
     const prisma = createPrismaClient()
-    const updated = await withRetry(() => prisma.qualityTraining.update({
-      where: { id },
-      data: { title, description, logos, updatedBy, updateNotes }
-    }))
+    const updated = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.qualityTraining.update({
+        where: { id },
+        data: { title, description, logos, updatedBy, updateNotes }
+      }))
+    })
     return NextResponse.json(updated)
   } catch (error) {
     console.error('Error updating QualityTraining:', error)
@@ -89,7 +91,9 @@ export async function DELETE(
     }
     const { id } = await params
     const prisma = createPrismaClient()
-    await withRetry(() => prisma.qualityTraining.delete({ where: { id } }))
+    await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.qualityTraining.delete({ where: { id } }))
+    })
     return NextResponse.json({ message: 'Deleted' })
   } catch (error) {
     console.error('Error deleting QualityTraining:', error)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { Prisma } from '@prisma/client'
 
@@ -110,19 +110,21 @@ export async function PUT(
       updateData.password = await bcrypt.hash(password, 12)
     }
 
-    const user = await withRetry(() => prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    }))
+    const user = await withAuditUser(prisma, sessionUser.id, async (tx) => {
+      return await tx.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      })
+    })
 
     return NextResponse.json(user)
   } catch (error) {
@@ -164,9 +166,11 @@ export async function DELETE(
       return NextResponse.json({ message: 'Cannot delete super admin' }, { status: 400 })
     }
 
-    await withRetry(() => prisma.user.delete({
-      where: { id }
-    }))
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.user.delete({
+        where: { id }
+      })
+    })
 
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {

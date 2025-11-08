@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -61,17 +61,19 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-    const created = await withRetry(() => prisma.qualityTraining.create({
-      data: {
-        title,
-        description,
-        logos,
-        createdBy: user.email || 'system'
-      },
-      include: {
-        jenisQualityTrainings: true
-      }
-    }))
+    const created = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.qualityTraining.create({
+        data: {
+          title,
+          description,
+          logos,
+          createdBy: user.email || 'system'
+        },
+        include: {
+          jenisQualityTrainings: true
+        }
+      }))
+    })
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
     console.error('Error creating QualityTraining:', error)

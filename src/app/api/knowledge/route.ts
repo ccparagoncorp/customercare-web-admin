@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { uploadFileServer, deleteFileServer, deleteFilesServer } from '@/lib/supabase-storage'
 import { Prisma } from '@prisma/client'
 
@@ -324,75 +324,77 @@ export async function POST(request: NextRequest) {
     }
 
     // Create knowledge with details using per-request Prisma client
-    const newKnowledge = await withRetry(async () => {
-      const prisma = createPrismaClient()
-      try {
-        return await prisma.knowledge.create({
-          data: {
-            title: title.trim(),
-            description: description,
-            logos: knowledgeLogos,
-            createdBy: createdBy,
-            detailKnowledges: {
-              create: resolvedDetails.map((detail) => ({
-                name: detail.name.trim(),
-                description: detail.description || '',
-                logos: detail.logos,
-                jenisDetailKnowledges: {
-                  create: detail.jenisDetails.map((jenis) => ({
-                    name: jenis.name.trim(),
-                    description: jenis.description || '',
-                    logos: jenis.logos,
-                    produkJenisDetailKnowledges: {
-                      create: jenis.produkJenisDetails.map((produk) => ({
-                        name: produk.name.trim(),
-                        description: produk.description || '',
-                        logos: produk.logos
-                      }))
-                    }
-                  }))
-                }
-              }))
-            }
-          },
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            logos: true,
-            createdAt: true,
-            updatedAt: true,
-            createdBy: true,
-            updatedBy: true,
-            detailKnowledges: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                logos: true,
-                jenisDetailKnowledges: {
-                  select: {
-                    id: true,
-                    name: true,
-                    description: true,
-                    logos: true,
-                    produkJenisDetailKnowledges: {
-                      select: {
-                        id: true,
-                        name: true,
-                        description: true,
-                        logos: true
+    const prisma = createPrismaClient()
+    const newKnowledge = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(async () => {
+        try {
+          return await prisma.knowledge.create({
+            data: {
+              title: title.trim(),
+              description: description,
+              logos: knowledgeLogos,
+              createdBy: createdBy,
+              detailKnowledges: {
+                create: resolvedDetails.map((detail) => ({
+                  name: detail.name.trim(),
+                  description: detail.description || '',
+                  logos: detail.logos,
+                  jenisDetailKnowledges: {
+                    create: detail.jenisDetails.map((jenis) => ({
+                      name: jenis.name.trim(),
+                      description: jenis.description || '',
+                      logos: jenis.logos,
+                      produkJenisDetailKnowledges: {
+                        create: jenis.produkJenisDetails.map((produk) => ({
+                          name: produk.name.trim(),
+                          description: produk.description || '',
+                          logos: produk.logos
+                        }))
+                      }
+                    }))
+                  }
+                }))
+              }
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              logos: true,
+              createdAt: true,
+              updatedAt: true,
+              createdBy: true,
+              updatedBy: true,
+              detailKnowledges: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  logos: true,
+                  jenisDetailKnowledges: {
+                    select: {
+                      id: true,
+                      name: true,
+                      description: true,
+                      logos: true,
+                      produkJenisDetailKnowledges: {
+                        select: {
+                          id: true,
+                          name: true,
+                          description: true,
+                          logos: true
+                        }
                       }
                     }
                   }
                 }
               }
             }
-          }
-        })
-      } finally {
-        await prisma.$disconnect()
-      }
+          })
+        } catch (error) {
+          throw error
+        }
+      })
     })
 
     return NextResponse.json(
@@ -507,13 +509,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete knowledge (cascades detailKnowledges via relation)
-    await withRetry(async () => {
-      const prisma = createPrismaClient()
-      try {
-        return await prisma.knowledge.delete({ where: { id: knowledgeId } })
-      } finally {
-        await prisma.$disconnect()
-      }
+    const prisma = createPrismaClient()
+    await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(async () => {
+        try {
+          return await prisma.knowledge.delete({ where: { id: knowledgeId } })
+        } catch (error) {
+          throw error
+        }
+      })
     })
 
     return NextResponse.json(
@@ -844,62 +848,66 @@ export async function PUT(request: NextRequest) {
         })
       }
       // Clear existing details and update knowledge using per-request Prisma client
-      await withRetry(async () => {
-        const prisma = createPrismaClient()
-        try {
-          await prisma.detailKnowledge.deleteMany({ where: { knowledgeId: id } })
-          return await prisma.knowledge.update({
-            where: { id },
-            data: {
-              ...(title ? { title: title.trim() } : {}),
-              ...(description !== undefined ? { description } : {}),
-              ...(logosToSet.length ? { logos: logosToSet } : {}),
-              updatedBy,
-              ...(updateNotes ? { updateNotes: updateNotes.trim() } : {}),
-              detailKnowledges: {
-                create: resolved.map(r => ({ 
-                  name: r.name, 
-                  description: r.description, 
-                  logos: r.logos,
-                  jenisDetailKnowledges: {
-                    create: r.jenisDetails.map(jenis => ({
-                      name: jenis.name,
-                      description: jenis.description,
-                      logos: jenis.logos,
-                      produkJenisDetailKnowledges: {
-                        create: jenis.produkJenisDetails.map(produk => ({
-                          name: produk.name,
-                          description: produk.description,
-                          logos: produk.logos
-                        }))
-                      }
-                    }))
-                  }
-                }))
+      const prisma = createPrismaClient()
+      await withAuditUser(prisma, user.id, async () => {
+        return await withRetry(async () => {
+          try {
+            await prisma.detailKnowledge.deleteMany({ where: { knowledgeId: id } })
+            return await prisma.knowledge.update({
+              where: { id },
+              data: {
+                ...(title ? { title: title.trim() } : {}),
+                ...(description !== undefined ? { description } : {}),
+                ...(logosToSet.length ? { logos: logosToSet } : {}),
+                updatedBy,
+                ...(updateNotes ? { updateNotes: updateNotes.trim() } : {}),
+                detailKnowledges: {
+                  create: resolved.map(r => ({ 
+                    name: r.name, 
+                    description: r.description, 
+                    logos: r.logos,
+                    jenisDetailKnowledges: {
+                      create: r.jenisDetails.map(jenis => ({
+                        name: jenis.name,
+                        description: jenis.description,
+                        logos: jenis.logos,
+                        produkJenisDetailKnowledges: {
+                          create: jenis.produkJenisDetails.map(produk => ({
+                            name: produk.name,
+                            description: produk.description,
+                            logos: produk.logos
+                          }))
+                        }
+                      }))
+                    }
+                  }))
+                }
               }
-            }
-          })
-        } finally {
-          await prisma.$disconnect()
-        }
+            })
+          } catch (error) {
+            throw error
+          }
+        })
       })
     } else {
-      await withRetry(async () => {
-        const prisma = createPrismaClient()
-        try {
-          return await prisma.knowledge.update({
-            where: { id },
-            data: {
-              ...(title ? { title: title.trim() } : {}),
-              ...(description !== undefined ? { description } : {}),
-              ...(logosToSet.length ? { logos: logosToSet } : {}),
-              updatedBy,
-              ...(updateNotes ? { updateNotes: updateNotes.trim() } : {})
-            }
-          })
-        } finally {
-          await prisma.$disconnect()
-        }
+      const prisma = createPrismaClient()
+      await withAuditUser(prisma, user.id, async () => {
+        return await withRetry(async () => {
+          try {
+            return await prisma.knowledge.update({
+              where: { id },
+              data: {
+                ...(title ? { title: title.trim() } : {}),
+                ...(description !== undefined ? { description } : {}),
+                ...(logosToSet.length ? { logos: logosToSet } : {}),
+                updatedBy,
+                ...(updateNotes ? { updateNotes: updateNotes.trim() } : {})
+              }
+            })
+          } catch (error) {
+            throw error
+          }
+        })
       })
     }
 

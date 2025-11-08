@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "moduleResolution": "node"
+  },
+  "include": ["scripts/**/*.ts", "prisma/**/*.ts"]
+}
+

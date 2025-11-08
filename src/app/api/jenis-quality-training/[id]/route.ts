@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -87,44 +87,48 @@ export async function PUT(
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     if (!qualityTrainingId) return NextResponse.json({ error: 'QualityTraining is required' }, { status: 400 })
     const prisma = createPrismaClient()
-    // Replace strategy: update main fields, purge details, recreate nested
-    await withRetry(() => prisma.jenisQualityTraining.update({
-      where: { id },
-      data: { name, description, logos, qualityTrainingId, updatedBy, updateNotes }
-    }))
+    
+    // Replace strategy: update main fields, purge details, recreate nested with audit tracking
+    await withAuditUser(prisma, user.id, async () => {
+      // Replace strategy: update main fields, purge details, recreate nested
+      await withRetry(() => prisma.jenisQualityTraining.update({
+        where: { id },
+        data: { name, description, logos, qualityTrainingId, updatedBy, updateNotes }
+      }))
 
-    // Delete existing details (cascades subdetails)
-    await withRetry(() => prisma.detailQualityTraining.deleteMany({ where: { jenisQualityTrainingId: id } }))
+      // Delete existing details (cascades subdetails)
+      await withRetry(() => prisma.detailQualityTraining.deleteMany({ where: { jenisQualityTrainingId: id } }))
 
-    // Recreate details + subdetails if provided
-    if (details && details.length > 0) {
-      for (const d of details as DetailInput[]) {
-        const createdDetail = await withRetry(() => prisma.detailQualityTraining.create({
-          data: {
-            name: d.name,
-            description: d.description,
-            linkslide: d.linkslide,
-            updatedBy: d.updatedBy,
-            updateNotes: d.updateNotes,
-            logos: d.logos || [],
-            jenisQualityTrainingId: id
-          }
-        }))
-        if (d.subdetails && d.subdetails.length > 0) {
-          const subdetailsArray = d.subdetails as SubdetailInput[]
-          await withRetry(() => prisma.subdetailQualityTraining.createMany({
-            data: subdetailsArray.map((s: SubdetailInput) => ({
-              name: s.name,
-              description: s.description,
-              updatedBy: s.updatedBy,
-              updateNotes: s.updateNotes,
-              logos: s.logos || [],
-              detailQualityTrainingId: createdDetail.id
-            }))
+      // Recreate details + subdetails if provided
+      if (details && details.length > 0) {
+        for (const d of details as DetailInput[]) {
+          const createdDetail = await withRetry(() => prisma.detailQualityTraining.create({
+            data: {
+              name: d.name,
+              description: d.description,
+              linkslide: d.linkslide,
+              updatedBy: d.updatedBy,
+              updateNotes: d.updateNotes,
+              logos: d.logos || [],
+              jenisQualityTrainingId: id
+            }
           }))
+          if (d.subdetails && d.subdetails.length > 0) {
+            const subdetailsArray = d.subdetails as SubdetailInput[]
+            await withRetry(() => prisma.subdetailQualityTraining.createMany({
+              data: subdetailsArray.map((s: SubdetailInput) => ({
+                name: s.name,
+                description: s.description,
+                updatedBy: s.updatedBy,
+                updateNotes: s.updateNotes,
+                logos: s.logos || [],
+                detailQualityTrainingId: createdDetail.id
+              }))
+            }))
+          }
         }
       }
-    }
+    })
 
     const refreshed = await withRetry(() => prisma.jenisQualityTraining.findUnique({
       where: { id },
@@ -156,7 +160,9 @@ export async function DELETE(
     }
     const { id } = await params
     const prisma = createPrismaClient()
-    await withRetry(() => prisma.jenisQualityTraining.delete({ where: { id } }))
+    await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.jenisQualityTraining.delete({ where: { id } }))
+    })
     return NextResponse.json({ message: 'Deleted' })
   } catch (error) {
     console.error('Error deleting JenisQualityTraining:', error)

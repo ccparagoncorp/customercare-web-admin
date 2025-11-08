@@ -3,8 +3,15 @@ import { NextResponse } from 'next/server'
 
 export default withAuth(
   function middleware(req) {
-    // Middleware hanya perlu memastikan authorized callback bekerja
-    // withAuth sudah handle redirect otomatis jika tidak authorized
+    // If user is authenticated and tries to access login page, redirect to dashboard
+    if (req.nextUrl.pathname === '/login' && req.nextauth.token) {
+      const url = req.nextUrl.clone()
+      url.pathname = '/admin/dashboard'
+      return NextResponse.redirect(url)
+    }
+    
+    // For all other cases, let withAuth handle it
+    return NextResponse.next()
   },
   {
     callbacks: {
@@ -16,6 +23,7 @@ export default withAuth(
 
         // Require authentication for admin routes
         if (req.nextUrl.pathname.startsWith('/admin')) {
+          // Token must exist for admin routes
           return !!token
         }
 

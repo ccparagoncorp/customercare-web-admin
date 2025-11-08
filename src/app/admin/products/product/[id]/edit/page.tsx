@@ -60,6 +60,8 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [fetching, setFetching] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [brands, setBrands] = useState<Brand[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
@@ -82,6 +84,9 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
   const resolvedParams = use(params)
 
   const fetchData = useCallback(async () => {
+    setFetching(true)
+    setError(null)
+    
     try {
       const [brandsRes, categoriesRes, productRes] = await Promise.all([
         fetch('/api/brand'),
@@ -89,18 +94,37 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
         fetch(`/api/product/${resolvedParams.id}`)
       ])
 
-      if (brandsRes.ok) {
+      // Check for errors
+      const errors: string[] = []
+      
+      if (!brandsRes.ok) {
+        const errorData = await brandsRes.json().catch(() => ({}))
+        errors.push(`Gagal memuat brand: ${errorData.error || brandsRes.statusText}`)
+      } else {
         const brandsData = await brandsRes.json()
         setBrands(brandsData)
       }
 
-      if (categoriesRes.ok) {
+      if (!categoriesRes.ok) {
+        const errorData = await categoriesRes.json().catch(() => ({}))
+        errors.push(`Gagal memuat kategori: ${errorData.error || categoriesRes.statusText}`)
+      } else {
         const categoriesData = await categoriesRes.json()
         setCategories(categoriesData.categories)
         setSubcategories(categoriesData.subcategories)
       }
 
-      if (productRes.ok) {
+      if (!productRes.ok) {
+        const errorData = await productRes.json().catch(() => ({}))
+        if (productRes.status === 404) {
+          setError('Produk tidak ditemukan')
+          setTimeout(() => {
+            router.push('/admin/products')
+          }, 2000)
+          return
+        }
+        errors.push(`Gagal memuat produk: ${errorData.error || productRes.statusText}`)
+      } else {
         const productData = await productRes.json()
         const user = session?.user as UserWithRole | undefined
         setProduct(productData)
@@ -118,12 +142,23 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
           updateNotes: '',
           updatedBy: user?.email || ''
         })
-      } else {
-        router.push('/admin/products')
+      }
+
+      if (errors.length > 0) {
+        setError(errors.join(', '))
       }
     } catch (error) {
       console.error('Error fetching data:', error)
-      router.push('/admin/products')
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat memuat data'
+      
+      // Check if it's a database connection error
+      if (errorMessage.includes('database') || errorMessage.includes('connection') || errorMessage.includes('Can\'t reach')) {
+        setError('Tidak dapat terhubung ke database. Pastikan koneksi database aktif dan DATABASE_URL sudah benar.')
+      } else {
+        setError(`Error: ${errorMessage}`)
+      }
+    } finally {
+      setFetching(false)
     }
   }, [resolvedParams.id, session, router])
 
@@ -262,8 +297,96 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
     )
   }
 
-  if (!session || !product) {
+  if (!session) {
     return null
+  }
+
+  // Show loading state while fetching data
+  if (fetching) {
+    return (
+      <AdminLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Memuat data produk...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  // Show error state if there's an error and no product data
+  if (error && !product) {
+    return (
+      <AdminLayout>
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-[#03438f] to-[#012f65] rounded-2xl p-8 text-white">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.back()}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Edit Produk</h1>
+                <p className="text-blue-100 text-lg">Error</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          <div className="bg-white rounded-2xl shadow-lg border border-red-200 p-8">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <X className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-900 mb-2">Error Memuat Data</h3>
+                <p className="text-red-700 mb-4">{error}</p>
+                <div className="flex space-x-4">
+                  <Button
+                    onClick={() => fetchData()}
+                    className="bg-[#03438f] hover:bg-[#012f65] text-white"
+                  >
+                    Coba Lagi
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/admin/products')}
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Kembali ke Daftar Produk
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  // If no product data but no error, show loading or redirect
+  if (!product) {
+    return (
+      <AdminLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Produk tidak ditemukan</p>
+            <Button
+              onClick={() => router.push('/admin/products')}
+              className="bg-[#03438f] hover:bg-[#012f65] text-white"
+            >
+              Kembali ke Daftar Produk
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    )
   }
 
   const { sections } = productContent
@@ -286,6 +409,25 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
             </div>
           </div>
         </div>
+
+        {/* Error Banner (if error but product data exists) */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <X className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Peringatan</p>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <button
+                  onClick={() => fetchData()}
+                  className="text-sm text-red-600 hover:text-red-800 underline mt-2"
+                >
+                  Coba muat ulang data
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">

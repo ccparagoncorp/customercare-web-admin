@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
 
 interface SessionUser {
@@ -109,17 +109,19 @@ export async function PUT(
         return NextResponse.json({ error: 'Brand is required for category' }, { status: 400 })
       }
 
-      const category = await withRetry(() => prisma.kategoriProduk.update({
-        where: { id },
-        data: {
-          name,
-          description,
-          images,
-          brandId,
-          updatedBy,
-          updateNotes
-        }
-      }))
+      const category = await withAuditUser(prisma, user.id, async () => {
+        return await withRetry(() => prisma.kategoriProduk.update({
+          where: { id },
+          data: {
+            name,
+            description,
+            images,
+            brandId,
+            updatedBy,
+            updateNotes
+          }
+        }))
+      })
 
       return NextResponse.json(category)
     } else if (type === 'subcategory') {
@@ -127,17 +129,19 @@ export async function PUT(
         return NextResponse.json({ error: 'Parent category is required for subcategory' }, { status: 400 })
       }
 
-      const subcategory = await withRetry(() => prisma.subkategoriProduk.update({
-        where: { id },
-        data: {
-          name,
-          description,
-          images,
-          kategoriProdukId: parentCategoryId,
-          updatedBy,
-          updateNotes
-        }
-      }))
+      const subcategory = await withAuditUser(prisma, user.id, async () => {
+        return await withRetry(() => prisma.subkategoriProduk.update({
+          where: { id },
+          data: {
+            name,
+            description,
+            images,
+            kategoriProdukId: parentCategoryId,
+            updatedBy,
+            updateNotes
+          }
+        }))
+      })
 
       return NextResponse.json(subcategory)
     }
@@ -196,9 +200,11 @@ export async function DELETE(
         }
       }
 
-      await withRetry(() => prisma.kategoriProduk.delete({
-        where: { id }
-      }))
+      await withAuditUser(prisma, user.id, async () => {
+        return await withRetry(() => prisma.kategoriProduk.delete({
+          where: { id }
+        }))
+      })
     } else if (type === 'subcategory') {
       // Check if subcategory has associated products
       const subcategoryWithProducts = await withRetry(() => prisma.subkategoriProduk.findUnique({
@@ -226,9 +232,11 @@ export async function DELETE(
         }
       }
 
-      await withRetry(() => prisma.subkategoriProduk.delete({
-        where: { id }
-      }))
+      await withAuditUser(prisma, user.id, async () => {
+        return await withRetry(() => prisma.subkategoriProduk.delete({
+          where: { id }
+        }))
+      })
     }
 
     return NextResponse.json({ message: 'Category deleted successfully' })

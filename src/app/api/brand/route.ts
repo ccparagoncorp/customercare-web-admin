@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -68,16 +68,18 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-    const brand = await withRetry(() => prisma.brand.create({
-      data: {
-        name,
-        description,
-        images,
-        link_sampul,
-        colorbase,
-        createdBy: user.email || 'system'
-      }
-    }))
+    const brand = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.brand.create({
+        data: {
+          name,
+          description,
+          images,
+          link_sampul,
+          colorbase,
+          createdBy: user.email || 'system'
+        }
+      })
+    })
 
     return NextResponse.json(brand, { status: 201 })
   } catch (error) {

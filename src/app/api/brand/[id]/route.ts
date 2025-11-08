@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
 
 interface SessionUser {
@@ -80,18 +80,20 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
-    const brand = await withRetry(() => prisma.brand.update({
-      where: { id },
-      data: {
-        name,
-        description,
-        images,
-        link_sampul,
-        colorbase,
-        updatedBy: user.email || 'system',
-        updateNotes
-      }
-    }))
+    const brand = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.brand.update({
+        where: { id },
+        data: {
+          name,
+          description,
+          images,
+          link_sampul,
+          colorbase,
+          updatedBy: user.email || 'system',
+          updateNotes
+        }
+      }))
+    })
 
     return NextResponse.json(brand)
   } catch (error) {
@@ -148,9 +150,11 @@ export async function DELETE(
       }
     }
 
-    await withRetry(() => prisma.brand.delete({
-      where: { id }
-    }))
+    await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.brand.delete({
+        where: { id }
+      }))
+    })
 
     return NextResponse.json({ message: 'Brand deleted successfully' })
   } catch (error) {

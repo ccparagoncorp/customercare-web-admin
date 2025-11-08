@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -83,18 +83,20 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
-    const sop = await withRetry(() => prisma.sOP.update({
-      where: { id },
-      data: {
-        name,
-        description,
-        kategoriSOPId
-      },
-      include: {
-        kategoriSOP: true,
-        jenisSOPs: true
-      }
-    }))
+    const sop = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.sOP.update({
+        where: { id },
+        data: {
+          name,
+          description,
+          kategoriSOPId
+        },
+        include: {
+          kategoriSOP: true,
+          jenisSOPs: true
+        }
+      }))
+    })
 
     return NextResponse.json(sop)
   } catch (error) {
@@ -121,9 +123,11 @@ export async function DELETE(
     const { id } = await params
 
     const prisma = createPrismaClient()
-    await withRetry(() => prisma.sOP.delete({
-      where: { id }
-    }))
+    await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.sOP.delete({
+        where: { id }
+      }))
+    })
 
     return NextResponse.json({ message: 'SOP deleted successfully' })
   } catch (error) {

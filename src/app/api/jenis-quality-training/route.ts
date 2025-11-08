@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -73,36 +73,38 @@ export async function POST(request: NextRequest) {
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     if (!qualityTrainingId) return NextResponse.json({ error: 'QualityTraining is required' }, { status: 400 })
     const prisma = createPrismaClient()
-    const created = await withRetry(() => prisma.jenisQualityTraining.create({
-      data: {
-        name,
-        description,
-        logos,
-        qualityTrainingId,
-        updatedBy,
-        updateNotes,
-        detailQualityTrainings: {
-          create: (details as DetailInput[]).map((d: DetailInput) => ({
-            name: d.name,
-            description: d.description,
-            linkslide: d.linkslide,
-            updatedBy: d.updatedBy,
-            updateNotes: d.updateNotes,
-            logos: d.logos || [],
-            subdetailQualityTrainings: {
-              create: (d.subdetails || []).map((s: SubdetailInput) => ({
-                name: s.name,
-                description: s.description,
-                updatedBy: s.updatedBy,
-                updateNotes: s.updateNotes,
-                logos: s.logos || []
-              }))
-            }
-          }))
-        }
-      },
-      include: { qualityTraining: true, detailQualityTrainings: { include: { subdetailQualityTrainings: true } } }
-    }))
+    const created = await withAuditUser(prisma, user.id, async () => {
+      return await withRetry(() => prisma.jenisQualityTraining.create({
+        data: {
+          name,
+          description,
+          logos,
+          qualityTrainingId,
+          updatedBy,
+          updateNotes,
+          detailQualityTrainings: {
+            create: (details as DetailInput[]).map((d: DetailInput) => ({
+              name: d.name,
+              description: d.description,
+              linkslide: d.linkslide,
+              updatedBy: d.updatedBy,
+              updateNotes: d.updateNotes,
+              logos: d.logos || [],
+              subdetailQualityTrainings: {
+                create: (d.subdetails || []).map((s: SubdetailInput) => ({
+                  name: s.name,
+                  description: s.description,
+                  updatedBy: s.updatedBy,
+                  updateNotes: s.updateNotes,
+                  logos: s.logos || []
+                }))
+              }
+            }))
+          }
+        },
+        include: { qualityTraining: true, detailQualityTrainings: { include: { subdetailQualityTrainings: true } } }
+      }))
+    })
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
     console.error('Error creating JenisQualityTraining:', error)
