@@ -1,10 +1,51 @@
 import { PrismaClient } from '@prisma/client'
 
 /**
+ * Type definition for Prisma client with tracerUpdate model
+ * This is needed because TypeScript may not recognize the model immediately after generation
+ */
+interface TracerUpdateModel {
+  id: string
+  sourceTable: string
+  sourceKey: string
+  fieldName: string
+  oldValue: string | null
+  newValue: string | null
+  actionType: string
+  changedAt: Date
+  changedBy: string | null
+}
+
+interface PrismaClientWithTracerUpdate extends PrismaClient {
+  tracerUpdate: {
+    findMany: (args?: {
+      where?: {
+        sourceTable?: string
+        sourceKey?: string
+        actionType?: string
+        changedAt?: {
+          gte?: Date
+          lte?: Date
+        }
+      }
+      orderBy?: {
+        changedAt?: 'asc' | 'desc'
+      }
+      take?: number
+    }) => Promise<TracerUpdateModel[]>
+  }
+}
+
+/**
  * Helper function untuk mendapatkan audit log dari tracer_updates
  */
 export class AuditLogService {
-  constructor(private prisma: PrismaClient) {}
+  private prisma: PrismaClientWithTracerUpdate
+
+  constructor(prisma: PrismaClient) {
+    // Type assertion: tracerUpdate exists at runtime after Prisma generation
+    this.prisma = prisma as unknown as PrismaClientWithTracerUpdate
+  }
 
   /**
    * Get audit logs berdasarkan tabel sumber
