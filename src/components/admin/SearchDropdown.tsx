@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, X, Package, Users, FileText, BookOpen, Building2, Layers, Tag, Loader2 } from 'lucide-react'
+import { Search, Package, Users, FileText, BookOpen, Building2, Layers, Tag, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface SearchResult {
@@ -85,7 +85,7 @@ export function SearchDropdown({ isOpen, onClose, query }: SearchDropdownProps) 
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, results, selectedIndex, onClose])
+  }, [isOpen, results, selectedIndex, onClose, handleResultClick])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -237,6 +237,7 @@ export function SearchDropdown({ isOpen, onClose, query }: SearchDropdownProps) 
                   {/* Image */}
                   {result.image && (
                     <div className="flex-shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={result.image}
                         alt={result.title}

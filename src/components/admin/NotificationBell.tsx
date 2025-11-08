@@ -112,7 +112,6 @@ function markNotificationsAsRead(notificationIds: string[]) {
 export function NotificationBell({ unreadCount: initialUnreadCount }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [serverUnreadCount, setServerUnreadCount] = useState(initialUnreadCount || 0)
   const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set())
   const [lastViewedTimestamp, setLastViewedTimestamp] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -146,7 +145,6 @@ export function NotificationBell({ unreadCount: initialUnreadCount }: Notificati
 
       const data = await response.json()
       setNotifications(data.notifications || [])
-      setServerUnreadCount(data.unreadCount || 0)
     } catch (error) {
       console.error('Error fetching notifications:', error)
     } finally {
@@ -198,7 +196,7 @@ export function NotificationBell({ unreadCount: initialUnreadCount }: Notificati
 
     // Observe all notification elements after a short delay to ensure DOM is ready
     const timer = setTimeout(() => {
-      notificationRefs.current.forEach((element, notificationId) => {
+      notificationRefs.current.forEach((element) => {
         if (element && observer) {
           observer.observe(element)
         }

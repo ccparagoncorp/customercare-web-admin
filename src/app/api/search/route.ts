@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const searchTerm = `%${query.trim()}%`
     const prisma = createPrismaClient()
 
     try {

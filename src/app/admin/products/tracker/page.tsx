@@ -2,9 +2,9 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useCallback } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
-import { Package, ArrowLeft, Filter, Search, Calendar, User, FileText, RefreshCw } from "lucide-react"
+import { ArrowLeft, Filter, Search, Calendar, User, FileText, RefreshCw } from "lucide-react"
 
 interface UserWithRole {
   id: string
@@ -36,6 +36,37 @@ function ProductTrackerContent() {
   const [page, setPage] = useState(1)
   const itemsPerPage = 20
 
+  const fetchLogs = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        table: 'produks',
+        limit: itemsPerPage.toString(),
+      })
+
+      if (filterAction !== 'ALL') {
+        params.append('action', filterAction)
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+      params.append('page', page.toString())
+
+      const response = await fetch(`/api/audit?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch audit logs')
+      }
+
+      const data = await response.json()
+      setLogs(data.logs || [])
+    } catch (error) {
+      console.error('Error fetching audit logs:', error)
+      setLogs([])
+    } finally {
+      setLoading(false)
+    }
+  }, [filterAction, searchTerm, page, itemsPerPage])
+
   useEffect(() => {
     if (status === 'loading') return
 
@@ -51,38 +82,12 @@ function ProductTrackerContent() {
     }
 
     fetchLogs()
-  }, [session, status, router, filterAction])
+  }, [session, status, router, fetchLogs])
 
   // Reset page when filter changes
   useEffect(() => {
     setPage(1)
   }, [filterAction, searchTerm])
-
-  const fetchLogs = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        table: 'produks',
-        limit: itemsPerPage.toString(),
-      })
-
-      if (filterAction !== 'ALL') {
-        params.append('action', filterAction)
-      }
-
-      const response = await fetch(`/api/audit?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch audit logs')
-      }
-
-      const data = await response.json()
-      setLogs(data.logs || [])
-    } catch (error) {
-      console.error('Error fetching audit logs:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

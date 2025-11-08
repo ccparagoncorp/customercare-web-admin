@@ -40,7 +40,11 @@ export async function GET(request: NextRequest) {
       sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7)
 
       // Build query for notifications
-      const where: any = {}
+      const where: {
+        changedAt?: {
+          gt: Date
+        }
+      } = {}
       
       // If since is provided, only get notifications after that timestamp
       if (since) {

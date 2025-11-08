@@ -14,14 +14,6 @@ interface JWTUser {
   role: string
 }
 
-interface SessionUser {
-  id: string
-  role: string
-  email?: string
-  name?: string
-  image?: string | null
-}
-
 // Determine if we should use secure cookies
 // Secure cookies required for HTTPS in production
 const shouldUseSecureCookies = () => {

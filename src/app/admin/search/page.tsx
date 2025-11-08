@@ -220,6 +220,7 @@ function SearchContent() {
                           {/* Image */}
                           {result.image && (
                             <div className="flex-shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={result.image}
                                 alt={result.title}
