@@ -1,7 +1,8 @@
 import { PrismaClient } from '@prisma/client'
 
 // Create a new Prisma client for each request with prepared statements disabled
-export function createPrismaClient() {
+// Explicitly return PrismaClient to ensure all models are typed correctly
+export function createPrismaClient(): PrismaClient {
   const databaseUrl = process.env.DATABASE_URL
   
   if (!databaseUrl) {
@@ -15,7 +16,7 @@ export function createPrismaClient() {
   url.searchParams.set('pool_timeout', '0')
   url.searchParams.set('pgbouncer', 'true')
 
-  return new PrismaClient({
+  const client = new PrismaClient({
     datasources: {
       db: {
         url: url.toString(),
@@ -23,6 +24,8 @@ export function createPrismaClient() {
     },
     log: ['error'],
   })
+  
+  return client
 }
 
 

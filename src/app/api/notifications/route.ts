@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 interface SessionUser {
   id: string
@@ -40,11 +41,7 @@ export async function GET(request: NextRequest) {
       sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7)
 
       // Build query for notifications
-      const where: {
-        changedAt?: {
-          gt: Date
-        }
-      } = {}
+      const where: Prisma.TracerUpdateWhereInput = {}
       
       // If since is provided, only get notifications after that timestamp
       if (since) {
@@ -53,7 +50,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const queryWhere = {
+      const queryWhere: Prisma.TracerUpdateWhereInput = {
         ...where,
         changedAt: {
           ...(where.changedAt || {}),
@@ -62,9 +59,15 @@ export async function GET(request: NextRequest) {
       }
 
       // Get notifications and unread count in parallel
+      // Type assertion: Prisma client includes tracerUpdate model after generation
+      // The model exists at runtime - using type assertion until TS server recognizes it
+      const typedPrisma = prisma as typeof prisma & {
+        tracerUpdate: Prisma.TracerUpdateDelegate<Prisma.RejectOnNotFound | Prisma.RejectPerOperation>
+      }
+      
       const [notifications, recentNotifications] = await Promise.all([
         // Get recent audit logs for notifications list
-        withRetry(() => prisma.tracerUpdate.findMany({
+        withRetry(() => typedPrisma.tracerUpdate.findMany({
           where: queryWhere,
           orderBy: {
             changedAt: 'desc',
@@ -72,7 +75,7 @@ export async function GET(request: NextRequest) {
           take: limit * 10, // Get more to group them properly
         })),
         // Get recent notifications for unread count
-        withRetry(() => prisma.tracerUpdate.findMany({
+        withRetry(() => typedPrisma.tracerUpdate.findMany({
           where: {
             changedAt: {
               gte: sevenDaysAgoDate,
