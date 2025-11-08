@@ -23,6 +23,7 @@ interface PrismaClientWithTracerUpdate extends PrismaClient {
         sourceTable?: string
         sourceKey?: string
         actionType?: string
+        changedBy?: string
         changedAt?: {
           gte?: Date
           lte?: Date
