@@ -109,7 +109,7 @@ function markNotificationsAsRead(notificationIds: string[]) {
   notificationIds.forEach(id => markNotificationAsRead(id))
 }
 
-export function NotificationBell({ unreadCount: initialUnreadCount }: NotificationBellProps) {
+export function NotificationBell({}: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set())
