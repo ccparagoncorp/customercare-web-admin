@@ -63,6 +63,11 @@ export function SearchDropdown({ isOpen, onClose, query }: SearchDropdownProps) 
     }
   }
 
+  const handleResultClick = useCallback((result: SearchResult) => {
+    router.push(result.url)
+    onClose()
+  }, [router, onClose])
+
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen) return
@@ -103,11 +108,6 @@ export function SearchDropdown({ isOpen, onClose, query }: SearchDropdownProps) 
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen, onClose])
-
-  const handleResultClick = useCallback((result: SearchResult) => {
-    router.push(result.url)
-    onClose()
-  }, [router, onClose])
 
   const getIcon = (type: SearchResult['type']) => {
     switch (type) {
