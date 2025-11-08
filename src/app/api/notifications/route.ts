@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 
 interface SessionUser {
   id: string
@@ -41,29 +40,23 @@ export async function GET(request: NextRequest) {
       sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7)
 
       // Build query for notifications
-      const where: Prisma.TracerUpdateWhereInput = {}
-      
-      // If since is provided, only get notifications after that timestamp
-      if (since) {
-        where.changedAt = {
-          gt: new Date(since)
-        }
-      }
-
-      const queryWhere: Prisma.TracerUpdateWhereInput = {
-        ...where,
+      // Use plain object type instead of Prisma types to avoid type errors
+      const queryWhere: {
         changedAt: {
-          ...(where.changedAt || {}),
+          gte: Date
+          gt?: Date
+        }
+      } = {
+        changedAt: {
           gte: since ? new Date(since) : sevenDaysAgoDate,
+          ...(since ? { gt: new Date(since) } : {}),
         },
       }
 
       // Get notifications and unread count in parallel
       // Type assertion: Prisma client includes tracerUpdate model after generation
       // The model exists at runtime - using type assertion until TS server recognizes it
-      const typedPrisma = prisma as typeof prisma & {
-        tracerUpdate: Prisma.TracerUpdateDelegate<Prisma.RejectOnNotFound | Prisma.RejectPerOperation>
-      }
+      const typedPrisma = prisma as any
       
       const [notifications, recentNotifications] = await Promise.all([
         // Get recent audit logs for notifications list
