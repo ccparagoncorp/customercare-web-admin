@@ -56,7 +56,47 @@ export async function GET(request: NextRequest) {
       // Get notifications and unread count in parallel
       // Type assertion: Prisma client includes tracerUpdate model after generation
       // The model exists at runtime - using type assertion until TS server recognizes it
-      const typedPrisma = prisma as any
+      interface TracerUpdateFull {
+        id: string
+        sourceTable: string
+        sourceKey: string
+        fieldName: string
+        oldValue: string | null
+        newValue: string | null
+        actionType: string
+        changedAt: Date
+        changedBy: string | null
+      }
+
+      interface TracerUpdatePartial {
+        sourceTable: string
+        sourceKey: string
+        changedAt: Date
+      }
+
+      interface PrismaClientWithTracerUpdate {
+        tracerUpdate: {
+          findMany: (args?: {
+            where?: {
+              changedAt?: {
+                gte?: Date
+                gt?: Date
+              }
+            }
+            orderBy?: {
+              changedAt?: 'asc' | 'desc'
+            }
+            take?: number
+            select?: {
+              sourceTable?: boolean
+              sourceKey?: boolean
+              changedAt?: boolean
+            }
+          }) => Promise<TracerUpdateFull[] | TracerUpdatePartial[]>
+        }
+        $disconnect: () => Promise<void>
+      }
+      const typedPrisma = prisma as unknown as PrismaClientWithTracerUpdate
       
       const [notifications, recentNotifications] = await Promise.all([
         // Get recent audit logs for notifications list
@@ -66,7 +106,7 @@ export async function GET(request: NextRequest) {
             changedAt: 'desc',
           },
           take: limit * 10, // Get more to group them properly
-        })),
+        })) as Promise<TracerUpdateFull[]>,
         // Get recent notifications for unread count
         withRetry(() => typedPrisma.tracerUpdate.findMany({
           where: {
@@ -79,7 +119,7 @@ export async function GET(request: NextRequest) {
             sourceKey: true,
             changedAt: true,
           },
-        }))
+        })) as Promise<TracerUpdatePartial[]>
       ])
 
       // Group notifications by timestamp and sourceKey (same operation)
