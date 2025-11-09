@@ -166,48 +166,94 @@ export async function PUT(
     // Update product with audit tracking
     // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
     await withAuditUser(prisma, user.id, async (tx) => {
-      // Prepare update data with proper Prisma relation syntax
-      const finalUpdateData: Prisma.ProdukUpdateInput = {
-        ...updateData
+      // Normalize IDs: convert empty string or '-' to null
+      const normalizeId = (id: string | undefined): string | null => {
+        if (!id || id.trim() === '' || id === '-') {
+          return null
+        }
+        return id.trim()
       }
 
-      // Handle category and subcategory first
-      // Priority: subcategory > category > brand (direct)
-      // If subcategory or category exists, brandId will come from them automatically
-      
+      const normalizedSubcategoryId = normalizeId(subcategoryId)
+      const normalizedCategoryId = normalizeId(categoryId)
+      const normalizedBrandId = normalizeId(brandId)
+
+      // Determine final values with priority: subcategory > category > brand
+      // Process all fields that are provided, respecting priority
+      let finalSubkategoriProdukId: string | null | undefined = undefined
+      let finalCategoryId: string | null | undefined = undefined
+      let finalBrandId: string | null | undefined = undefined
+
+      // Priority 1: Subcategory (highest priority)
+      // If subcategory is provided, it takes precedence
       if (subcategoryId !== undefined) {
-        if (subcategoryId && subcategoryId !== '-') {
-          // Connect to subcategory (brandId will come from subcategory's category's brand)
-          finalUpdateData.subkategoriProduk = { connect: { id: subcategoryId } }
-          finalUpdateData.kategoriProduk = { disconnect: true }
-          finalUpdateData.brand = { disconnect: true } // Brand comes from subcategory, not direct
+        if (normalizedSubcategoryId) {
+          finalSubkategoriProdukId = normalizedSubcategoryId
+          // When subcategory is set, clear category and brand (they come from subcategory)
+          finalCategoryId = null
+          finalBrandId = null
         } else {
-          // subcategoryId is "-" or empty, disconnect subcategory
-          finalUpdateData.subkategoriProduk = { disconnect: true }
+          // Clear subcategory if empty
+          finalSubkategoriProdukId = null
         }
       }
 
-      // Handle categoryId (only if no subcategory or subcategory is being removed)
-      if (categoryId !== undefined && (!subcategoryId || subcategoryId === '-')) {
-        if (categoryId && categoryId !== '-') {
-          // Connect to category (brandId will come from category's brand)
-          finalUpdateData.kategoriProduk = { connect: { id: categoryId } }
-          finalUpdateData.subkategoriProduk = { disconnect: true }
-          finalUpdateData.brand = { disconnect: true } // Brand comes from category, not direct
+      // Priority 2: Category (only if subcategory is not set)
+      // Process category only if subcategory is not being set to a valid value
+      if (categoryId !== undefined && !normalizedSubcategoryId) {
+        if (normalizedCategoryId) {
+          finalCategoryId = normalizedCategoryId
+          // When category is set, clear subcategory and brand (brand comes from category)
+          if (finalSubkategoriProdukId === undefined) {
+            finalSubkategoriProdukId = null
+          }
+          finalBrandId = null
         } else {
-          // categoryId is "-" or empty, disconnect category
-          finalUpdateData.kategoriProduk = { disconnect: true }
+          // Clear category if empty
+          finalCategoryId = null
         }
       }
 
-      // Handle brandId directly (only if no subcategory and no category)
-      // This is for products with only brand (no category/subcategory)
-      if (brandId !== undefined && (!subcategoryId || subcategoryId === '-') && (!categoryId || categoryId === '-')) {
-        if (brandId && brandId !== '-') {
-          finalUpdateData.brand = { connect: { id: brandId } }
+      // Priority 3: Brand (only if neither subcategory nor category is set)
+      // Process brand only if subcategory and category are not being set to valid values
+      if (brandId !== undefined && !normalizedSubcategoryId && !normalizedCategoryId) {
+        if (normalizedBrandId) {
+          finalBrandId = normalizedBrandId
+          // When brand is set directly, clear subcategory and category
+          if (finalSubkategoriProdukId === undefined) {
+            finalSubkategoriProdukId = null
+          }
+          if (finalCategoryId === undefined) {
+            finalCategoryId = null
+          }
         } else {
-          finalUpdateData.brand = { disconnect: true }
+          // Clear brand if empty
+          finalBrandId = null
         }
+      }
+
+      // Prepare update data
+      const finalUpdateData: Prisma.ProdukUpdateInput = {
+        name,
+        description,
+        kapasitas,
+        status: (status as ProductStatus) || ProductStatus.ACTIVE,
+        harga: harga ?? undefined,
+        images,
+        updatedBy,
+        updateNotes
+      }
+
+      // Set relationship fields only if they were determined (not undefined)
+      // This ensures we only update fields that were explicitly provided
+      if (finalSubkategoriProdukId !== undefined) {
+        finalUpdateData.subkategoriProdukId = finalSubkategoriProdukId
+      }
+      if (finalCategoryId !== undefined) {
+        finalUpdateData.categoryId = finalCategoryId
+      }
+      if (finalBrandId !== undefined) {
+        finalUpdateData.brandId = finalBrandId
       }
 
       // Update product

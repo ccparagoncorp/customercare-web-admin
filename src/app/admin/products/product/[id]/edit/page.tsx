@@ -128,6 +128,26 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
         const productData = await productRes.json()
         const user = session?.user as UserWithRole | undefined
         setProduct(productData)
+        // Determine brandId, categoryId, subcategoryId from product data
+        // Priority: subcategory > category > direct brand
+        let brandId = ''
+        let categoryId = ''
+        let subcategoryId = ''
+        
+        if (productData.subkategoriProduk) {
+          // Has subcategory - get brand and category from subcategory
+          subcategoryId = productData.subkategoriProduk.id
+          categoryId = productData.subkategoriProduk.kategoriProduk?.id || ''
+          brandId = productData.subkategoriProduk.kategoriProduk?.brand?.id || ''
+        } else if (productData.kategoriProduk) {
+          // Has category - get brand from category
+          categoryId = productData.kategoriProduk.id
+          brandId = productData.kategoriProduk.brand?.id || ''
+        } else if (productData.brand) {
+          // Has direct brand
+          brandId = productData.brand.id
+        }
+
         setFormData({
           name: productData.name,
           description: productData.description || '',
@@ -135,9 +155,9 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
           harga: (productData.harga != null ? String(productData.harga) : ''),
           status: productData.status || 'ACTIVE',
           images: productData.images || [],
-          brandId: (productData.subkategoriProduk?.kategoriProduk?.brand?.id) || (productData.kategoriProduk?.brand?.id) || '',
-          categoryId: (productData.subkategoriProduk?.kategoriProduk?.id) || (productData.kategoriProduk?.id) || '',
-          subcategoryId: productData.subkategoriProduk?.id || '',
+          brandId: brandId,
+          categoryId: categoryId,
+          subcategoryId: subcategoryId,
           details: productData.detailProduks || [],
           updateNotes: '',
           updatedBy: user?.email || ''

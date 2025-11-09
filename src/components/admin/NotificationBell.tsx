@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, X, CheckCircle2, AlertCircle, Trash2, Info } from 'lucide-react'
+import { apiGet } from '@/lib/api-client'
 
 interface Notification {
   id: string
@@ -142,19 +143,25 @@ export function NotificationBell({}: NotificationBellProps) {
     return isNewerThanLastViewed || isNotRead
   }).length
 
-  // Fetch notifications
+  // Fetch notifications with proper error handling
   const fetchNotifications = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/notifications?limit=20')
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications')
-      }
+      const result = await apiGet<{ notifications: Notification[] }>('/api/notifications?limit=20', {
+        timeout: 5000, // 5 second timeout
+        retries: 1, // Retry once on failure
+      })
 
-      const data = await response.json()
-      setNotifications(data.notifications || [])
+      if (result.ok && result.data) {
+        setNotifications(result.data.notifications || [])
+      } else {
+        // Silently handle error - don't show notifications if fetch fails
+        // Error is already handled by apiGet, no need to log or throw
+        setNotifications([])
+      }
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      // Fallback error handling (should not happen with safeFetch, but just in case)
+      setNotifications([])
     } finally {
       setLoading(false)
     }

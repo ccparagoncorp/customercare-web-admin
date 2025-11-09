@@ -59,11 +59,18 @@ BEGIN
         WHEN 'subkategori_produks' THEN
             v_kategori_produk_id := (row_data->>'kategoriProdukId')::text;
             v_subcategory_id := (row_data->>'id')::text;
-            -- Get brandId dari kategori_produks
-            SELECT "brandId" INTO v_brand_id
-            FROM kategori_produks
-            WHERE id = v_kategori_produk_id;
             v_category_id := v_kategori_produk_id;
+            -- Get brandId dari kategori_produks (with error handling for DELETE)
+            BEGIN
+                SELECT "brandId" INTO v_brand_id
+                FROM kategori_produks
+                WHERE id = v_kategori_produk_id;
+                -- If no data found, v_brand_id will remain NULL (no exception)
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_brand_id := NULL;
+            END;
 
         WHEN 'produks' THEN
             v_brand_id := (row_data->>'brandId')::text;
@@ -72,18 +79,27 @@ BEGIN
 
         WHEN 'detail_produks' THEN
             v_produk_id := (row_data->>'produkId')::text;
-            -- Get brandId, categoryId, subcategoryId dari produks
-            SELECT 
-                COALESCE("brandId", '')::text,
-                COALESCE("categoryId", '')::text,
-                COALESCE("subkategoriProdukId", '')::text
-            INTO v_brand_id, v_category_id, v_subcategory_id
-            FROM produks
-            WHERE id = v_produk_id;
-            -- Convert empty string to NULL
-            IF v_brand_id = '' THEN v_brand_id := NULL; END IF;
-            IF v_category_id = '' THEN v_category_id := NULL; END IF;
-            IF v_subcategory_id = '' THEN v_subcategory_id := NULL; END IF;
+            -- Get brandId, categoryId, subcategoryId dari produks (with error handling for DELETE)
+            BEGIN
+                SELECT 
+                    COALESCE("brandId", '')::text,
+                    COALESCE("categoryId", '')::text,
+                    COALESCE("subkategoriProdukId", '')::text
+                INTO v_brand_id, v_category_id, v_subcategory_id
+                FROM produks
+                WHERE id = v_produk_id;
+                -- If no data found, variables will remain NULL (no exception)
+                -- Convert empty string to NULL
+                IF v_brand_id = '' THEN v_brand_id := NULL; END IF;
+                IF v_category_id = '' THEN v_category_id := NULL; END IF;
+                IF v_subcategory_id = '' THEN v_subcategory_id := NULL; END IF;
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_brand_id := NULL;
+                    v_category_id := NULL;
+                    v_subcategory_id := NULL;
+            END;
 
         -- ==================== KNOWLEDGE TABLES ====================
         WHEN 'knowledges' THEN
@@ -94,18 +110,32 @@ BEGIN
 
         WHEN 'jenis_detail_knowledges' THEN
             v_detail_knowledge_id := (row_data->>'detailKnowledgeId')::text;
-            -- Get knowledgeId dari detail_knowledges
-            SELECT "knowledgeId" INTO v_knowledge_id
-            FROM detail_knowledges
-            WHERE id = v_detail_knowledge_id;
+            -- Get knowledgeId dari detail_knowledges (with error handling for DELETE)
+            BEGIN
+                SELECT "knowledgeId" INTO v_knowledge_id
+                FROM detail_knowledges
+                WHERE id = v_detail_knowledge_id;
+                -- If no data found, v_knowledge_id will remain NULL (no exception)
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_knowledge_id := NULL;
+            END;
 
         WHEN 'produk_jenis_detail_knowledges' THEN
             v_jenis_detail_knowledge_id := (row_data->>'jenisDetailKnowledgeId')::text;
-            -- Get detailKnowledgeId, then knowledgeId
-            SELECT dk."knowledgeId" INTO v_knowledge_id
-            FROM jenis_detail_knowledges jdk
-            JOIN detail_knowledges dk ON dk.id = jdk."detailKnowledgeId"
-            WHERE jdk.id = v_jenis_detail_knowledge_id;
+            -- Get detailKnowledgeId, then knowledgeId (with error handling for DELETE)
+            BEGIN
+                SELECT dk."knowledgeId" INTO v_knowledge_id
+                FROM jenis_detail_knowledges jdk
+                JOIN detail_knowledges dk ON dk.id = jdk."detailKnowledgeId"
+                WHERE jdk.id = v_jenis_detail_knowledge_id;
+                -- If no data found, v_knowledge_id will remain NULL (no exception)
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_knowledge_id := NULL;
+            END;
 
         -- ==================== SOP TABLES ====================
         WHEN 'kategori_sops' THEN
@@ -120,10 +150,17 @@ BEGIN
 
         WHEN 'detail_sops' THEN
             v_jenis_sop_id := (row_data->>'jenisSOPId')::text;
-            -- Get sopId dari jenis_sops
-            SELECT "sopId" INTO v_sop_id
-            FROM jenis_sops
-            WHERE id = v_jenis_sop_id;
+            -- Get sopId dari jenis_sops (with error handling for DELETE)
+            BEGIN
+                SELECT "sopId" INTO v_sop_id
+                FROM jenis_sops
+                WHERE id = v_jenis_sop_id;
+                -- If no data found, v_sop_id will remain NULL (no exception)
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_sop_id := NULL;
+            END;
 
         -- ==================== QUALITY TRAINING TABLES ====================
         WHEN 'quality_trainings' THEN
@@ -134,18 +171,32 @@ BEGIN
 
         WHEN 'detail_quality_trainings' THEN
             v_jenis_quality_training_id := (row_data->>'jenisQualityTrainingId')::text;
-            -- Get qualityTrainingId dari jenis_quality_trainings
-            SELECT "qualityTrainingId" INTO v_quality_training_id
-            FROM jenis_quality_trainings
-            WHERE id = v_jenis_quality_training_id;
+            -- Get qualityTrainingId dari jenis_quality_trainings (with error handling for DELETE)
+            BEGIN
+                SELECT "qualityTrainingId" INTO v_quality_training_id
+                FROM jenis_quality_trainings
+                WHERE id = v_jenis_quality_training_id;
+                -- If no data found, v_quality_training_id will remain NULL (no exception)
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_quality_training_id := NULL;
+            END;
 
         WHEN 'subdetail_quality_trainings' THEN
             v_detail_quality_training_id := (row_data->>'detailQualityTrainingId')::text;
-            -- Get jenisQualityTrainingId, then qualityTrainingId
-            SELECT jqt."qualityTrainingId" INTO v_quality_training_id
-            FROM detail_quality_trainings dqt
-            JOIN jenis_quality_trainings jqt ON jqt.id = dqt."jenisQualityTrainingId"
-            WHERE dqt.id = v_detail_quality_training_id;
+            -- Get jenisQualityTrainingId, then qualityTrainingId (with error handling for DELETE)
+            BEGIN
+                SELECT jqt."qualityTrainingId" INTO v_quality_training_id
+                FROM detail_quality_trainings dqt
+                JOIN jenis_quality_trainings jqt ON jqt.id = dqt."jenisQualityTrainingId"
+                WHERE dqt.id = v_detail_quality_training_id;
+                -- If no data found, v_quality_training_id will remain NULL (no exception)
+            EXCEPTION 
+                WHEN OTHERS THEN
+                    -- Any error (e.g., table doesn't exist, constraint violation), keep NULL
+                    v_quality_training_id := NULL;
+            END;
 
         ELSE
             -- Unknown table, semua ID tetap NULL

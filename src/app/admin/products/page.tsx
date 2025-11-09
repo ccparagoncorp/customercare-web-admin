@@ -61,6 +61,7 @@ interface Product {
   harga?: string | number
   status: string
   images: string[]
+  brand?: Brand
   subkategoriProduk?: Subcategory
   kategoriProduk?: Category
   detailProduks: ProductDetail[]
@@ -128,31 +129,64 @@ function ProductManagementContent() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [brandsRes, categoriesRes, productsRes] = await Promise.all([
+      // Use Promise.allSettled to handle errors gracefully
+      const [brandsResult, categoriesResult, productsResult] = await Promise.allSettled([
         fetch('/api/brand'),
         fetch('/api/category'),
         fetch('/api/product')
       ])
-
+      
+      // Handle brands
+      const brandsRes = brandsResult.status === 'fulfilled' ? brandsResult.value : { ok: false, json: () => Promise.resolve([]) }
       if (brandsRes.ok) {
-        const brandsData = await brandsRes.json()
-        setBrands(brandsData)
+        try {
+          const brandsData = await brandsRes.json()
+          setBrands(Array.isArray(brandsData) ? brandsData : [])
+        } catch {
+          setBrands([])
+        }
+      } else {
+        setBrands([])
       }
 
+      // Handle categories
+      const categoriesRes = categoriesResult.status === 'fulfilled' ? categoriesResult.value : { ok: false, json: () => Promise.resolve({ categories: [], subcategories: [] }) }
       if (categoriesRes.ok) {
-        const categoriesData = await categoriesRes.json()
-        setCategories(categoriesData.categories)
-        setSubcategories(categoriesData.subcategories)
+        try {
+          const categoriesData = await categoriesRes.json()
+          setCategories(Array.isArray(categoriesData?.categories) ? categoriesData.categories : [])
+          setSubcategories(Array.isArray(categoriesData?.subcategories) ? categoriesData.subcategories : [])
+        } catch {
+          setCategories([])
+          setSubcategories([])
+        }
+      } else {
+        setCategories([])
+        setSubcategories([])
       }
 
+      // Handle products
+      const productsRes = productsResult.status === 'fulfilled' ? productsResult.value : { ok: false, json: () => Promise.resolve([]) }
       if (productsRes.ok) {
-        const productsData = await productsRes.json()
-        setProducts(productsData)
+        try {
+          const productsData = await productsRes.json()
+          setProducts(Array.isArray(productsData) ? productsData : [])
+        } catch {
+          setProducts([])
+        }
+      } else {
+        setProducts([])
       }
       
       setDataLoaded(true)
     } catch (error) {
-      console.error('Error fetching data:', error)
+      // Silently handle errors - set empty arrays as fallback
+      // No console.error to prevent console pollution
+      setBrands([])
+      setCategories([])
+      setSubcategories([])
+      setProducts([])
+      setDataLoaded(true)
     } finally {
       setLoading(false)
     }
@@ -183,7 +217,10 @@ function ProductManagementContent() {
       (product.description && product.description.toLowerCase().includes(productSearch.toLowerCase())) ||
       (product.kapasitas && product.kapasitas.toLowerCase().includes(productSearch.toLowerCase()))
     
-    const matchesBrand = !productBrandFilter || (product.subkategoriProduk?.kategoriProduk?.brand?.id || product.kategoriProduk?.brand?.id) === productBrandFilter
+    const matchesBrand = !productBrandFilter || 
+      (product.subkategoriProduk?.kategoriProduk?.brand?.id || 
+       product.kategoriProduk?.brand?.id || 
+       product.brand?.id) === productBrandFilter
     const matchesCategory = !productCategoryFilter || (product.subkategoriProduk?.kategoriProduk?.id || product.kategoriProduk?.id) === productCategoryFilter
     const matchesSubcategory = !productSubcategoryFilter || product.subkategoriProduk?.id === productSubcategoryFilter
     
@@ -196,18 +233,21 @@ function ProductManagementContent() {
     try {
       const response = await fetch(`/api/brand/${id}`, {
         method: 'DELETE'
-      })
+      }).catch(() => ({ ok: false, json: () => Promise.resolve({ error: 'Network error' }) }))
 
       if (response.ok) {
         setBrands(brands.filter(brand => brand.id !== id))
         alert(productContent.messages.itemDeleted)
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error deleting brand')
+        try {
+          const error = await response.json()
+          alert(error.error || 'Error deleting brand')
+        } catch {
+          alert('Error deleting brand')
+        }
       }
     } catch (error) {
-      console.error('Error deleting brand:', error)
-      alert('Error deleting brand')
+      alert('Error deleting brand. Please try again.')
     }
   }
 
@@ -221,7 +261,7 @@ function ProductManagementContent() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ type })
-      })
+      }).catch(() => ({ ok: false, json: () => Promise.resolve({ error: 'Network error' }) }))
 
       if (response.ok) {
         if (type === 'category') {
@@ -231,12 +271,15 @@ function ProductManagementContent() {
         }
         alert(productContent.messages.itemDeleted)
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error deleting category')
+        try {
+          const error = await response.json()
+          alert(error.error || 'Error deleting category')
+        } catch {
+          alert('Error deleting category')
+        }
       }
     } catch (error) {
-      console.error('Error deleting category:', error)
-      alert('Error deleting category')
+      alert('Error deleting category. Please try again.')
     }
   }
 
@@ -246,18 +289,21 @@ function ProductManagementContent() {
     try {
       const response = await fetch(`/api/product/${id}`, {
         method: 'DELETE'
-      })
+      }).catch(() => ({ ok: false, json: () => Promise.resolve({ error: 'Network error' }) }))
 
       if (response.ok) {
         setProducts(products.filter(product => product.id !== id))
         alert(productContent.messages.itemDeleted)
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error deleting product')
+        try {
+          const error = await response.json()
+          alert(error.error || 'Error deleting product')
+        } catch {
+          alert('Error deleting product')
+        }
       }
     } catch (error) {
-      console.error('Error deleting product:', error)
-      alert('Error deleting product')
+      alert('Error deleting product. Please try again.')
     }
   }
 
@@ -1068,7 +1114,10 @@ function ProductManagementContent() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">
-                                {(product.subkategoriProduk?.kategoriProduk?.brand?.name || product.kategoriProduk?.brand?.name) || '-'}
+                                {product.subkategoriProduk?.kategoriProduk?.brand?.name || 
+                                 product.kategoriProduk?.brand?.name || 
+                                 product.brand?.name || 
+                                 '-'}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
