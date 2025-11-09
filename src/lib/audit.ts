@@ -235,7 +235,21 @@ export class AuditLogService {
     startDate?: Date
     endDate?: Date
   }, limit: number = 100) {
-    const where: any = {}
+    const where: {
+      brandId?: string
+      categoryId?: string
+      subcategoryId?: string
+      knowledgeId?: string
+      sopId?: string
+      qualityTrainingId?: string
+      sourceTable?: string
+      actionType?: string
+      changedBy?: string
+      changedAt?: {
+        gte?: Date
+        lte?: Date
+      }
+    } = {}
 
     if (filters.brandId) where.brandId = filters.brandId
     if (filters.categoryId) where.categoryId = filters.categoryId
