@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       // If subcategory is provided, use it (subcategory already has a category)
       // Otherwise, use category if provided
       // If both are "-" or empty but brandId is provided, create/get default category for brand
-      let subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
+      const subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
       let categoryIdValue: string | null = null
 
       if (subcategoryId && subcategoryId !== '-') {
