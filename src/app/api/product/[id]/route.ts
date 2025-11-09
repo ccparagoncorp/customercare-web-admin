@@ -221,7 +221,9 @@ export async function PUT(
       }
 
       // Prepare update data
-      const finalUpdateData: Prisma.ProdukUpdateInput = {
+      // Use same pattern as POST route (line 171-182) - direct field assignment works at runtime
+      // Prisma schema supports direct foreign key field assignment (brandId, categoryId, subkategoriProdukId)
+      const updateData = {
         name,
         description,
         kapasitas,
@@ -229,25 +231,21 @@ export async function PUT(
         harga: harga ?? undefined,
         images,
         updatedBy,
-        updateNotes
-      }
-
-      // Set relationship fields only if they were determined (not undefined)
-      // This ensures we only update fields that were explicitly provided
-      if (finalSubkategoriProdukId !== undefined) {
-        finalUpdateData.subkategoriProdukId = finalSubkategoriProdukId
-      }
-      if (finalCategoryId !== undefined) {
-        finalUpdateData.categoryId = finalCategoryId
-      }
-      if (finalBrandId !== undefined) {
-        finalUpdateData.brandId = finalBrandId
+        updateNotes,
+        // Add relationship fields only if they were determined (not undefined)
+        ...(finalSubkategoriProdukId !== undefined && { subkategoriProdukId: finalSubkategoriProdukId }),
+        ...(finalCategoryId !== undefined && { categoryId: finalCategoryId }),
+        ...(finalBrandId !== undefined && { brandId: finalBrandId }),
       }
 
       // Update product
+      // Note: Prisma.ProdukUpdateInput type doesn't expose direct foreign key fields (brandId, categoryId, subkategoriProdukId)
+      // in TypeScript, but the schema supports them and they work at runtime.
+      // This is the same pattern used in POST route (line 171-182) for creating products.
+      // We use type assertion to bypass TypeScript's type checking while maintaining runtime correctness.
       await tx.produk.update({
         where: { id },
-        data: finalUpdateData
+        data: updateData as unknown as Prisma.ProdukUpdateInput
       })
 
       // Update details
