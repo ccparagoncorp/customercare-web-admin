@@ -28,6 +28,7 @@ model Brand {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   kategoriProduks KategoriProduk[]
+  produks         Produk[]
 
   @@map("brands")
 }
@@ -75,6 +76,7 @@ model Produk {
   harga               Decimal?          @db.Decimal(12, 2)
   status              ProductStatus     @default(ACTIVE)
   images              String[]
+  brandId             String?           // opsional - relasi langsung ke brand
   categoryId          String?           // opsional
   subkategoriProdukId String?           // opsional
   createdBy           String?
@@ -83,6 +85,7 @@ model Produk {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   detailProduks       DetailProduk[]
+  brand               Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
   kategoriProduk      KategoriProduk?   @relation("KategoriProdukToProduk", fields: [categoryId], references: [id], onDelete: Cascade)
   subkategoriProduk   SubkategoriProduk? @relation(fields: [subkategoriProdukId], references: [id], onDelete: Cascade)
 

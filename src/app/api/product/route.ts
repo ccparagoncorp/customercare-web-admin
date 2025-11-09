@@ -41,35 +41,60 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
 
     const where: Prisma.ProdukWhereInput = {}
+    const andConditions: Prisma.ProdukWhereInput[] = []
 
+    // Brand filter: search by direct brandId or through category/subcategory
     if (brandId) {
-      where.subkategoriProduk = {
-        kategoriProduk: {
-          brandId
-        }
-      }
+      andConditions.push({
+        OR: [
+          { brandId: brandId },
+          {
+            subkategoriProduk: {
+              kategoriProduk: {
+                brandId
+              }
+            }
+          },
+          {
+            kategoriProduk: {
+              brandId
+            }
+          }
+        ]
+      })
     }
 
+    // Category filter
     if (categoryId) {
-      where.categoryId = categoryId
+      andConditions.push({ categoryId: categoryId })
     }
 
+    // Subcategory filter
     if (subcategoryId) {
-      where.subkategoriProdukId = subcategoryId
+      andConditions.push({ subkategoriProdukId: subcategoryId })
     }
 
+    // Search filter
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { kapasitas: { contains: search, mode: 'insensitive' } }
-      ]
+      andConditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { kapasitas: { contains: search, mode: 'insensitive' } }
+        ]
+      })
+    }
+
+    // Combine all conditions with AND
+    if (andConditions.length > 0) {
+      where.AND = andConditions
     }
 
     const prisma = createPrismaClient()
     const products = await withRetry(() => prisma.produk.findMany({
       where,
       include: {
+        brand: true,
         subkategoriProduk: {
           include: {
             kategoriProduk: {
@@ -133,43 +158,10 @@ export async function POST(request: NextRequest) {
       // Prepare data for category and subcategory
       // If subcategory is provided, use it (subcategory already has a category)
       // Otherwise, use category if provided
-      // If both are "-" or empty but brandId is provided, create/get default category for brand
+      // brandId can be set directly (no need for default category)
       const subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
-      let categoryIdValue: string | null = null
-
-      if (subcategoryId && subcategoryId !== '-') {
-        // If subcategory is provided, use it (category is automatically linked through subcategory)
-        categoryIdValue = null
-      } else if (categoryId && categoryId !== '-') {
-        // If category is provided and not "-", use it
-        categoryIdValue = categoryId
-      } else if ((!categoryId || categoryId === '-') && brandId) {
-        // If category is "-" or empty but brandId is provided, 
-        // find or create a default category named "-" for this brand
-        let defaultCategory = await tx.kategoriProduk.findFirst({
-          where: {
-            name: '-',
-            brandId: brandId
-          }
-        })
-
-        if (!defaultCategory) {
-          // Create default category for brand
-          defaultCategory = await tx.kategoriProduk.create({
-            data: {
-              name: '-',
-              brandId: brandId,
-              images: [],
-              createdBy: user.email || 'system'
-            }
-          })
-        }
-
-        categoryIdValue = defaultCategory.id
-      } else {
-        // No category, no brand, set to null (product with only brand - but this shouldn't happen if brand is selected)
-        categoryIdValue = null
-      }
+      const categoryIdValue = (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : null
+      const brandIdValue = brandId && brandId !== '-' ? brandId : null
 
       return await tx.produk.create({
         data: {
@@ -179,6 +171,7 @@ export async function POST(request: NextRequest) {
           status: (status as ProductStatus) || ProductStatus.ACTIVE,
           harga: harga ?? undefined,
           images,
+          brandId: brandIdValue,
           subkategoriProdukId,
           categoryId: categoryIdValue,
           createdBy: user.email || 'system',
@@ -191,6 +184,7 @@ export async function POST(request: NextRequest) {
           }
         },
         include: {
+          brand: true,
           subkategoriProduk: {
             include: {
               kategoriProduk: {
@@ -200,7 +194,11 @@ export async function POST(request: NextRequest) {
               }
             }
           },
-          kategoriProduk: true,
+          kategoriProduk: {
+            include: {
+              brand: true
+            }
+          },
           detailProduks: true
         }
       })

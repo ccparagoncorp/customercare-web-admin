@@ -59,6 +59,7 @@ export async function GET(
       const product = await withRetry(() => prisma.produk.findUnique({
         where: { id },
         include: {
+          brand: true,
           subkategoriProduk: {
             include: {
               kategoriProduk: {
@@ -165,143 +166,48 @@ export async function PUT(
     // Update product with audit tracking
     // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
     await withAuditUser(prisma, user.id, async (tx) => {
+      // Prepare update data with proper Prisma relation syntax
+      const finalUpdateData: Prisma.ProdukUpdateInput = {
+        ...updateData
+      }
+
+      // Handle brandId directly (no need for default category)
+      if (brandId !== undefined) {
+        if (brandId && brandId !== '-') {
+          finalUpdateData.brand = { connect: { id: brandId } }
+        } else {
+          finalUpdateData.brand = { disconnect: true }
+        }
+      }
+
       // Handle category and subcategory
       // Priority: subcategory > category (subcategory already has a category)
-      let finalCategoryId: string | null = null
-      let finalSubcategoryId: string | null = null
-
       if (subcategoryId !== undefined) {
         if (subcategoryId && subcategoryId !== '-') {
           // Connect to subcategory (this automatically handles category through relation)
-          finalSubcategoryId = subcategoryId
-          finalCategoryId = null
+          finalUpdateData.subkategoriProduk = { connect: { id: subcategoryId } }
+          finalUpdateData.kategoriProduk = { disconnect: true }
         } else {
           // subcategoryId is "-" or empty, disconnect subcategory
-          finalSubcategoryId = null
+          finalUpdateData.subkategoriProduk = { disconnect: true }
           // Handle categoryId
           if (categoryId !== undefined) {
             if (categoryId && categoryId !== '-') {
-              finalCategoryId = categoryId
-            } else if ((!categoryId || categoryId === '-') && brandId) {
-              // If category is "-" or empty but brandId is provided, 
-              // find or create a default category named "-" for this brand
-              let defaultCategory = await tx.kategoriProduk.findFirst({
-                where: {
-                  name: '-',
-                  brandId: brandId
-                }
-              })
-
-              if (!defaultCategory) {
-                // Create default category for brand
-                defaultCategory = await tx.kategoriProduk.create({
-                  data: {
-                    name: '-',
-                    brandId: brandId,
-                    images: [],
-                    createdBy: user.email || 'system'
-                  }
-                })
-              }
-
-              finalCategoryId = defaultCategory.id
+              finalUpdateData.kategoriProduk = { connect: { id: categoryId } }
             } else {
-              // categoryId is "-" or empty and no brandId, disconnect category
-              finalCategoryId = null
+              // categoryId is "-" or empty, disconnect category
+              finalUpdateData.kategoriProduk = { disconnect: true }
             }
-          } else if (brandId) {
-            // categoryId not provided but brandId is, find or create default category
-            let defaultCategory = await tx.kategoriProduk.findFirst({
-              where: {
-                name: '-',
-                brandId: brandId
-              }
-            })
-
-            if (!defaultCategory) {
-              defaultCategory = await tx.kategoriProduk.create({
-                data: {
-                  name: '-',
-                  brandId: brandId,
-                  images: [],
-                  createdBy: user.email || 'system'
-                }
-              })
-            }
-
-            finalCategoryId = defaultCategory.id
           }
         }
       } else if (categoryId !== undefined) {
         // Only categoryId is provided (subcategoryId not in request)
         if (categoryId && categoryId !== '-') {
-          finalCategoryId = categoryId
-          finalSubcategoryId = null
-        } else if ((!categoryId || categoryId === '-') && brandId) {
-          // categoryId is "-" or empty but brandId is provided, find or create default category
-          let defaultCategory = await tx.kategoriProduk.findFirst({
-            where: {
-              name: '-',
-              brandId: brandId
-            }
-          })
-
-          if (!defaultCategory) {
-            defaultCategory = await tx.kategoriProduk.create({
-              data: {
-                name: '-',
-                brandId: brandId,
-                images: [],
-                createdBy: user.email || 'system'
-              }
-            })
-          }
-
-          finalCategoryId = defaultCategory.id
-          finalSubcategoryId = null
+          finalUpdateData.kategoriProduk = { connect: { id: categoryId } }
+          // Disconnect subcategory if it exists
+          finalUpdateData.subkategoriProduk = { disconnect: true }
         } else {
-          // categoryId is "-" or empty and no brandId, disconnect category
-          finalCategoryId = null
-        }
-      } else if (brandId) {
-        // Neither categoryId nor subcategoryId provided, but brandId is provided
-        // Find or create default category for brand
-        let defaultCategory = await tx.kategoriProduk.findFirst({
-          where: {
-            name: '-',
-            brandId: brandId
-          }
-        })
-
-        if (!defaultCategory) {
-          defaultCategory = await tx.kategoriProduk.create({
-            data: {
-              name: '-',
-              brandId: brandId,
-              images: [],
-              createdBy: user.email || 'system'
-            }
-          })
-        }
-
-        finalCategoryId = defaultCategory.id
-        finalSubcategoryId = null
-      }
-
-      // Prepare update data with category and subcategory
-      const finalUpdateData: Prisma.ProdukUpdateInput = {
-        ...updateData
-      }
-
-      // Set category and subcategory using relation syntax
-      if (finalSubcategoryId !== null) {
-        finalUpdateData.subkategoriProduk = { connect: { id: finalSubcategoryId } }
-        finalUpdateData.kategoriProduk = { disconnect: true }
-      } else {
-        finalUpdateData.subkategoriProduk = { disconnect: true }
-        if (finalCategoryId !== null) {
-          finalUpdateData.kategoriProduk = { connect: { id: finalCategoryId } }
-        } else {
+          // categoryId is "-" or empty, disconnect category
           finalUpdateData.kategoriProduk = { disconnect: true }
         }
       }
@@ -334,6 +240,7 @@ export async function PUT(
     const updatedProduct = await withRetry(() => prisma.produk.findUnique({
       where: { id },
       include: {
+        brand: true,
         subkategoriProduk: {
           include: {
             kategoriProduk: {
