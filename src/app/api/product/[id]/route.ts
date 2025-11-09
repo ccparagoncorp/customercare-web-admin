@@ -149,7 +149,7 @@ export async function PUT(
 
     const prisma = createPrismaClient()
     
-    // Prepare update data
+    // Prepare update data with proper Prisma relation syntax
     const updateData: Prisma.ProdukUpdateInput = {
       name,
       description,
@@ -161,21 +161,40 @@ export async function PUT(
       updateNotes
     }
 
-    // Handle category and subcategory
+    // Handle category and subcategory using Prisma relation syntax
     // Priority: subcategory > category (subcategory already has a category)
-    // If subcategoryId is provided in request, update it
+    // If subcategoryId is provided in request
     if (subcategoryId !== undefined) {
-      updateData.subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
-      // If a valid subcategory is set, category should be null (subcategory already has a category)
       if (subcategoryId && subcategoryId !== '-') {
-        updateData.categoryId = null
-      } else if (categoryId !== undefined) {
-        // If subcategoryId is "-" or empty, allow categoryId to be set
-        updateData.categoryId = categoryId && categoryId !== '-' ? categoryId : null
+        // Connect to subcategory (this automatically handles category through relation)
+        updateData.subkategoriProduk = { connect: { id: subcategoryId } }
+        updateData.kategoriProduk = { disconnect: true }
+      } else {
+        // subcategoryId is "-" or empty, disconnect subcategory
+        updateData.subkategoriProduk = { disconnect: true }
+        // Handle categoryId
+        if (categoryId !== undefined) {
+          if (categoryId && categoryId !== '-') {
+            updateData.kategoriProduk = { connect: { id: categoryId } }
+          } else {
+            // categoryId is "-" or empty, disconnect category (product with only brand)
+            updateData.kategoriProduk = { disconnect: true }
+          }
+        }
+        // If categoryId is not provided but subcategoryId is "-", 
+        // we still disconnect subcategory (category remains unchanged)
       }
     } else if (categoryId !== undefined) {
-      // If subcategoryId is not provided but categoryId is, set categoryId
-      updateData.categoryId = categoryId && categoryId !== '-' ? categoryId : null
+      // Only categoryId is provided (subcategoryId not in request)
+      if (categoryId && categoryId !== '-') {
+        updateData.kategoriProduk = { connect: { id: categoryId } }
+        // Disconnect subcategory if it exists (category takes priority when no subcategory in request)
+        updateData.subkategoriProduk = { disconnect: true }
+      } else {
+        // categoryId is "-" or empty, disconnect category (product with only brand)
+        updateData.kategoriProduk = { disconnect: true }
+        // Note: subcategoryId not in request, so it remains unchanged
+      }
     }
     
     // Update product with audit tracking
