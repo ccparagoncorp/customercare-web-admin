@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Bell, X, CheckCircle2, AlertCircle, Trash2, Info } from 'lucide-react'
 
 interface Notification {
@@ -10,6 +11,12 @@ interface Notification {
   actionType: 'INSERT' | 'UPDATE' | 'DELETE'
   changedAt: string
   changedBy: string | null
+  brandId: string | null
+  categoryId: string | null
+  subcategoryId: string | null
+  knowledgeId: string | null
+  sopId: string | null
+  qualityTrainingId: string | null
   changes: Array<{
     fieldName: string
     oldValue: string | null
@@ -110,6 +117,7 @@ function markNotificationsAsRead(notificationIds: string[]) {
 }
 
 export function NotificationBell({}: NotificationBellProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set())
@@ -431,23 +439,28 @@ export function NotificationBell({}: NotificationBellProps) {
                       onClick={() => {
                         // Mark as read when clicked
                         markAsRead(notification.id)
+                        setIsOpen(false)
                         
-                        // Navigate based on source table
-                        if (notification.sourceTable === 'produks') {
-                          window.location.href = `/admin/products/tracker`
+                        // Navigate based on source table and related IDs
+                        // If brandId exists, navigate to brand tracking page
+                        if (notification.brandId) {
+                          router.push(`/admin/products/brand/${notification.brandId}/tracking`)
+                        } else if (notification.sourceTable === 'produks') {
+                          router.push(`/admin/products/tracker`)
                         } else if (notification.sourceTable === 'users') {
-                          window.location.href = `/admin/users`
+                          router.push(`/admin/users`)
                         } else if (notification.sourceTable === 'brands') {
-                          window.location.href = `/admin/products?tab=brand`
-                        } else if (notification.sourceTable === 'sops') {
-                          window.location.href = `/admin/sop`
-                        } else if (notification.sourceTable === 'knowledges') {
-                          window.location.href = `/admin/knowledge`
+                          router.push(`/admin/products?tab=brand`)
+                        } else if (notification.sourceTable === 'sops' || notification.sopId) {
+                          router.push(`/admin/sop`)
+                        } else if (notification.sourceTable === 'knowledges' || notification.knowledgeId) {
+                          router.push(`/admin/knowledge`)
+                        } else if (notification.sourceTable === 'quality_trainings' || notification.qualityTrainingId) {
+                          router.push(`/admin/quality-training`)
                         } else {
                           // Default to dashboard
-                          window.location.href = `/admin/dashboard`
+                          router.push(`/admin/dashboard`)
                         }
-                        setIsOpen(false)
                       }}
                     >
                     <div className="flex items-start space-x-3">
@@ -475,8 +488,39 @@ export function NotificationBell({}: NotificationBellProps) {
                           <p>
                             <span className="font-medium">Tabel:</span> {getTableLabel(notification.sourceTable)}
                           </p>
+                          {notification.brandId && (
+                            <p>
+                              <span className="font-medium">Brand:</span>{' '}
+                              <span className="text-[#03438f] font-semibold">ID: {notification.brandId.substring(0, 12)}...</span>
+                            </p>
+                          )}
+                          {notification.categoryId && (
+                            <p>
+                              <span className="font-medium">Kategori:</span> ID: {notification.categoryId.substring(0, 12)}...
+                            </p>
+                          )}
+                          {notification.subcategoryId && (
+                            <p>
+                              <span className="font-medium">Subkategori:</span> ID: {notification.subcategoryId.substring(0, 12)}...
+                            </p>
+                          )}
+                          {notification.knowledgeId && (
+                            <p>
+                              <span className="font-medium">Knowledge:</span> ID: {notification.knowledgeId.substring(0, 12)}...
+                            </p>
+                          )}
+                          {notification.sopId && (
+                            <p>
+                              <span className="font-medium">SOP:</span> ID: {notification.sopId.substring(0, 12)}...
+                            </p>
+                          )}
+                          {notification.qualityTrainingId && (
+                            <p>
+                              <span className="font-medium">Quality Training:</span> ID: {notification.qualityTrainingId.substring(0, 12)}...
+                            </p>
+                          )}
                           <p>
-                            <span className="font-medium">ID:</span> {notification.sourceKey.substring(0, 20)}...
+                            <span className="font-medium">Record ID:</span> {notification.sourceKey.substring(0, 20)}...
                           </p>
                           {notification.changedBy && (
                             <p>
@@ -531,8 +575,8 @@ export function NotificationBell({}: NotificationBellProps) {
             <div className="p-3 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={() => {
-                  // TODO: Navigate to full notifications page
-                  window.location.href = '/admin/products/tracker'
+                  router.push('/admin/products/tracker')
+                  setIsOpen(false)
                 }}
                 className="w-full text-center text-sm text-[#03438f] hover:text-[#012f65] font-medium"
               >

@@ -318,19 +318,32 @@ model SubdetailQualityTraining {
 }
 
 model TracerUpdate {
-  id          String   @id @default(cuid())
-  sourceTable String   @map("source_table")
-  sourceKey   String   @map("source_key")
-  fieldName   String   @map("field_name")
-  oldValue    String?  @db.Text @map("old_value")
-  newValue    String?  @db.Text @map("new_value")
-  actionType  String   @map("action_type") // INSERT, UPDATE, DELETE
-  changedAt   DateTime @default(now()) @map("changed_at")
-  changedBy   String?  @map("changed_by")
+  id                String   @id @default(cuid())
+  sourceTable       String   @map("source_table")
+  sourceKey         String   @map("source_key")
+  fieldName         String   @map("field_name")
+  oldValue          String?  @db.Text @map("old_value")
+  newValue          String?  @db.Text @map("new_value")
+  actionType        String   @map("action_type") // INSERT, UPDATE, DELETE
+  changedAt         DateTime @default(now()) @map("changed_at")
+  changedBy         String?  @map("changed_by")
+  // Related IDs untuk query yang lebih efisien
+  brandId           String?  @map("brand_id")
+  categoryId        String?  @map("category_id")
+  subcategoryId     String?  @map("subcategory_id")
+  knowledgeId       String?  @map("knowledge_id")
+  sopId             String?  @map("sop_id")
+  qualityTrainingId String?  @map("quality_training_id")
 
   @@index([sourceTable])
   @@index([sourceKey])
   @@index([actionType])
   @@index([changedAt])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([knowledgeId])
+  @@index([sopId])
+  @@index([qualityTrainingId])
   @@map("tracer_updates")
 }

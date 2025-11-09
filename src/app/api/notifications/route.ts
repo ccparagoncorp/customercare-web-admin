@@ -66,6 +66,12 @@ export async function GET(request: NextRequest) {
         actionType: string
         changedAt: Date
         changedBy: string | null
+        brandId: string | null
+        categoryId: string | null
+        subcategoryId: string | null
+        knowledgeId: string | null
+        sopId: string | null
+        qualityTrainingId: string | null
       }
 
       interface TracerUpdatePartial {
@@ -133,6 +139,12 @@ export async function GET(request: NextRequest) {
             actionType: log.actionType,
             changedAt: log.changedAt,
             changedBy: log.changedBy,
+            brandId: log.brandId,
+            categoryId: log.categoryId,
+            subcategoryId: log.subcategoryId,
+            knowledgeId: log.knowledgeId,
+            sopId: log.sopId,
+            qualityTrainingId: log.qualityTrainingId,
             changes: [],
           }
         }
@@ -149,6 +161,12 @@ export async function GET(request: NextRequest) {
         actionType: string
         changedAt: Date
         changedBy: string | null
+        brandId: string | null
+        categoryId: string | null
+        subcategoryId: string | null
+        knowledgeId: string | null
+        sopId: string | null
+        qualityTrainingId: string | null
         changes: Array<{
           fieldName: string
           oldValue: string | null

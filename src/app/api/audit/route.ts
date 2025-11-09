@@ -33,6 +33,12 @@ export async function GET(request: NextRequest) {
     const table = searchParams.get('table')
     const recordId = searchParams.get('recordId')
     const action = searchParams.get('action') as 'INSERT' | 'UPDATE' | 'DELETE' | null
+    const brandId = searchParams.get('brandId')
+    const categoryId = searchParams.get('categoryId')
+    const subcategoryId = searchParams.get('subcategoryId')
+    const knowledgeId = searchParams.get('knowledgeId')
+    const sopId = searchParams.get('sopId')
+    const qualityTrainingId = searchParams.get('qualityTrainingId')
     const limit = parseInt(searchParams.get('limit') || '100')
 
     const prisma = createPrismaClient()
@@ -41,7 +47,19 @@ export async function GET(request: NextRequest) {
     try {
       let logs
 
-      if (table && recordId) {
+      // If any related ID is provided, use the filter method
+      if (brandId || categoryId || subcategoryId || knowledgeId || sopId || qualityTrainingId) {
+        logs = await withRetry(() => auditService.getLogsWithFilters({
+          brandId: brandId || undefined,
+          categoryId: categoryId || undefined,
+          subcategoryId: subcategoryId || undefined,
+          knowledgeId: knowledgeId || undefined,
+          sopId: sopId || undefined,
+          qualityTrainingId: qualityTrainingId || undefined,
+          sourceTable: table || undefined,
+          actionType: action || undefined,
+        }, limit))
+      } else if (table && recordId) {
         // Get logs for specific record
         logs = await withRetry(() => auditService.getLogsByRecord(table, recordId))
       } else if (table) {
@@ -51,7 +69,7 @@ export async function GET(request: NextRequest) {
         // Get logs by action type
         logs = await withRetry(() => auditService.getLogsByAction(action, limit))
       } else {
-        return NextResponse.json({ error: 'Table or action parameter is required' }, { status: 400 })
+        return NextResponse.json({ error: 'Table, action, or related ID parameter is required' }, { status: 400 })
       }
 
       return NextResponse.json({ logs })
