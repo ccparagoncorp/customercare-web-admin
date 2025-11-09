@@ -572,14 +572,13 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                     value={formData.categoryId}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      categoryId: e.target.value,
+                      categoryId: e.target.value || '-',
                       subcategoryId: subcategories.some(sc => sc.kategoriProduk.id === e.target.value) ? '' : '-'
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent disabled:text-gray-400 disabled:bg-gray-50"
-                    required
-                    disabled={!categories.some(cat => cat.brand.id === formData.brandId)}
+                    disabled={formData.brandId ? !categories.some(cat => cat.brand.id === formData.brandId) : false}
                   >
-                    <option value="">{
+                    <option value="-">{
                       categories.some(cat => cat.brand.id === formData.brandId)
                         ? sections.product.form.fields.category.placeholder
                         : 'Tidak ada kategori'
@@ -599,12 +598,11 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
                   <select
                     id="subcategory"
                     value={formData.subcategoryId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, subcategoryId: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, subcategoryId: e.target.value || '-' }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent disabled:text-gray-400 disabled:bg-gray-50"
-                    required
-                    disabled={!subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId)}
+                    disabled={!subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId) || !formData.categoryId || formData.categoryId === '-'}
                   >
-                    <option value="">{
+                    <option value="-">{
                       subcategories.some(sc => sc.kategoriProduk.id === formData.categoryId)
                         ? sections.product.form.fields.subcategory.placeholder
                         : 'Tidak ada subkategori'

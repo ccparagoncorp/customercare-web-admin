@@ -155,13 +155,18 @@ export async function POST(request: NextRequest) {
 
     const prisma = createPrismaClient()
     const product = await withAuditUser(prisma, user.id, async (tx) => {
-      // Prepare data for category and subcategory
-      // If subcategory is provided, use it (subcategory already has a category)
-      // Otherwise, use category if provided
-      // brandId can be set directly (no need for default category)
+      // Prepare data for category, subcategory, and brand
+      // Priority: subcategory > category > brand (direct)
+      // If subcategory is provided, use it (brandId will come from subcategory's category's brand)
+      // If only category is provided, use it (brandId will come from category's brand)
+      // If only brandId is provided (no category/subcategory), use brandId directly
+      
       const subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
       const categoryIdValue = (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : null
-      const brandIdValue = brandId && brandId !== '-' ? brandId : null
+      
+      // brandId: only set if no subcategory and no category (product with only brand)
+      // If subcategory or category exists, brandId will be automatically linked through them
+      const brandIdValue = (!subkategoriProdukId && !categoryIdValue) && brandId && brandId !== '-' ? brandId : null
 
       return await tx.produk.create({
         data: {

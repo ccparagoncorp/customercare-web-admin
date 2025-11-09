@@ -171,44 +171,42 @@ export async function PUT(
         ...updateData
       }
 
-      // Handle brandId directly (no need for default category)
-      if (brandId !== undefined) {
+      // Handle category and subcategory first
+      // Priority: subcategory > category > brand (direct)
+      // If subcategory or category exists, brandId will come from them automatically
+      
+      if (subcategoryId !== undefined) {
+        if (subcategoryId && subcategoryId !== '-') {
+          // Connect to subcategory (brandId will come from subcategory's category's brand)
+          finalUpdateData.subkategoriProduk = { connect: { id: subcategoryId } }
+          finalUpdateData.kategoriProduk = { disconnect: true }
+          finalUpdateData.brand = { disconnect: true } // Brand comes from subcategory, not direct
+        } else {
+          // subcategoryId is "-" or empty, disconnect subcategory
+          finalUpdateData.subkategoriProduk = { disconnect: true }
+        }
+      }
+
+      // Handle categoryId (only if no subcategory or subcategory is being removed)
+      if (categoryId !== undefined && (!subcategoryId || subcategoryId === '-')) {
+        if (categoryId && categoryId !== '-') {
+          // Connect to category (brandId will come from category's brand)
+          finalUpdateData.kategoriProduk = { connect: { id: categoryId } }
+          finalUpdateData.subkategoriProduk = { disconnect: true }
+          finalUpdateData.brand = { disconnect: true } // Brand comes from category, not direct
+        } else {
+          // categoryId is "-" or empty, disconnect category
+          finalUpdateData.kategoriProduk = { disconnect: true }
+        }
+      }
+
+      // Handle brandId directly (only if no subcategory and no category)
+      // This is for products with only brand (no category/subcategory)
+      if (brandId !== undefined && (!subcategoryId || subcategoryId === '-') && (!categoryId || categoryId === '-')) {
         if (brandId && brandId !== '-') {
           finalUpdateData.brand = { connect: { id: brandId } }
         } else {
           finalUpdateData.brand = { disconnect: true }
-        }
-      }
-
-      // Handle category and subcategory
-      // Priority: subcategory > category (subcategory already has a category)
-      if (subcategoryId !== undefined) {
-        if (subcategoryId && subcategoryId !== '-') {
-          // Connect to subcategory (this automatically handles category through relation)
-          finalUpdateData.subkategoriProduk = { connect: { id: subcategoryId } }
-          finalUpdateData.kategoriProduk = { disconnect: true }
-        } else {
-          // subcategoryId is "-" or empty, disconnect subcategory
-          finalUpdateData.subkategoriProduk = { disconnect: true }
-          // Handle categoryId
-          if (categoryId !== undefined) {
-            if (categoryId && categoryId !== '-') {
-              finalUpdateData.kategoriProduk = { connect: { id: categoryId } }
-            } else {
-              // categoryId is "-" or empty, disconnect category
-              finalUpdateData.kategoriProduk = { disconnect: true }
-            }
-          }
-        }
-      } else if (categoryId !== undefined) {
-        // Only categoryId is provided (subcategoryId not in request)
-        if (categoryId && categoryId !== '-') {
-          finalUpdateData.kategoriProduk = { connect: { id: categoryId } }
-          // Disconnect subcategory if it exists
-          finalUpdateData.subkategoriProduk = { disconnect: true }
-        } else {
-          // categoryId is "-" or empty, disconnect category
-          finalUpdateData.kategoriProduk = { disconnect: true }
         }
       }
 
