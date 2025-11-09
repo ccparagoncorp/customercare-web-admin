@@ -10,7 +10,7 @@ interface FetchOptions extends RequestInit {
   retryDelay?: number
 }
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T
   error?: string
   status: number
@@ -28,11 +28,11 @@ const DEFAULT_RETRY_DELAY = 1000 // 1 second
 export async function safeFetchWrapper(
   url: string,
   options: RequestInit = {}
-): Promise<{ ok: boolean; json: () => Promise<any>; status: number; statusText: string }> {
+): Promise<{ ok: boolean; json: () => Promise<unknown>; status: number; statusText: string }> {
   try {
     const response = await fetch(url, options)
     return response
-  } catch (error) {
+  } catch {
     // Return a mock response object that mimics fetch response
     // This prevents errors from propagating
     return {
@@ -47,7 +47,7 @@ export async function safeFetchWrapper(
 /**
  * Safe fetch with error handling, timeout, and retry logic
  */
-export async function safeFetch<T = any>(
+export async function safeFetch<T = unknown>(
   url: string,
   options: FetchOptions = {}
 ): Promise<ApiResponse<T>> {
@@ -101,7 +101,7 @@ export async function safeFetch<T = any>(
             status: response.status,
             ok: true,
           }
-        } catch (parseError) {
+        } catch {
           // If response is not JSON, return empty data
           return {
             data: {} as T,
@@ -153,7 +153,7 @@ export async function safeFetch<T = any>(
 /**
  * GET request helper
  */
-export async function apiGet<T = any>(url: string, options?: FetchOptions): Promise<ApiResponse<T>> {
+export async function apiGet<T = unknown>(url: string, options?: FetchOptions): Promise<ApiResponse<T>> {
   return safeFetch<T>(url, {
     ...options,
     method: 'GET',
@@ -163,9 +163,9 @@ export async function apiGet<T = any>(url: string, options?: FetchOptions): Prom
 /**
  * POST request helper
  */
-export async function apiPost<T = any>(
+export async function apiPost<T = unknown>(
   url: string,
-  data?: any,
+  data?: unknown,
   options?: FetchOptions
 ): Promise<ApiResponse<T>> {
   return safeFetch<T>(url, {
@@ -182,9 +182,9 @@ export async function apiPost<T = any>(
 /**
  * PUT request helper
  */
-export async function apiPut<T = any>(
+export async function apiPut<T = unknown>(
   url: string,
-  data?: any,
+  data?: unknown,
   options?: FetchOptions
 ): Promise<ApiResponse<T>> {
   return safeFetch<T>(url, {
@@ -201,7 +201,7 @@ export async function apiPut<T = any>(
 /**
  * DELETE request helper
  */
-export async function apiDelete<T = any>(url: string, options?: FetchOptions): Promise<ApiResponse<T>> {
+export async function apiDelete<T = unknown>(url: string, options?: FetchOptions): Promise<ApiResponse<T>> {
   return safeFetch<T>(url, {
     ...options,
     method: 'DELETE',

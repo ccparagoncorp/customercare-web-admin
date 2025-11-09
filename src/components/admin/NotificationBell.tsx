@@ -159,7 +159,7 @@ export function NotificationBell({}: NotificationBellProps) {
         // Error is already handled by apiGet, no need to log or throw
         setNotifications([])
       }
-    } catch (error) {
+    } catch {
       // Fallback error handling (should not happen with safeFetch, but just in case)
       setNotifications([])
     } finally {

@@ -179,7 +179,7 @@ function ProductManagementContent() {
       }
       
       setDataLoaded(true)
-    } catch (error) {
+    } catch {
       // Silently handle errors - set empty arrays as fallback
       // No console.error to prevent console pollution
       setBrands([])
@@ -246,7 +246,7 @@ function ProductManagementContent() {
           alert('Error deleting brand')
         }
       }
-    } catch (error) {
+    } catch {
       alert('Error deleting brand. Please try again.')
     }
   }
@@ -278,7 +278,7 @@ function ProductManagementContent() {
           alert('Error deleting category')
         }
       }
-    } catch (error) {
+    } catch {
       alert('Error deleting category. Please try again.')
     }
   }
@@ -302,7 +302,7 @@ function ProductManagementContent() {
           alert('Error deleting product')
         }
       }
-    } catch (error) {
+    } catch {
       alert('Error deleting product. Please try again.')
     }
   }

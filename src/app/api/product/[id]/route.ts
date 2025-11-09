@@ -151,18 +151,6 @@ export async function PUT(
 
     const prisma = createPrismaClient()
     
-    // Prepare update data with proper Prisma relation syntax
-    const updateData: Prisma.ProdukUpdateInput = {
-      name,
-      description,
-      kapasitas,
-      status: (status as ProductStatus) || ProductStatus.ACTIVE,
-      harga: harga ?? undefined,
-      images,
-      updatedBy,
-      updateNotes
-    }
-
     // Update product with audit tracking
     // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
     await withAuditUser(prisma, user.id, async (tx) => {
