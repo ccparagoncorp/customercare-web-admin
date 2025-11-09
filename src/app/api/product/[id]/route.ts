@@ -138,9 +138,6 @@ export async function PUT(
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
-    if ((!subcategoryId || subcategoryId === '-') && (!categoryId || categoryId === '-')) {
-      return NextResponse.json({ error: 'Either category or subcategory is required' }, { status: 400 })
-    }
 
     if (!updateNotes) {
       return NextResponse.json({ error: 'Update notes is required' }, { status: 400 })
@@ -152,24 +149,44 @@ export async function PUT(
 
     const prisma = createPrismaClient()
     
+    // Prepare update data
+    const updateData: any = {
+      name,
+      description,
+      kapasitas,
+      status: (status as ProductStatus) || ProductStatus.ACTIVE,
+      harga: harga ?? undefined,
+      images,
+      updatedBy,
+      updateNotes
+    }
+
+    // Handle category and subcategory
+    // Priority: subcategory > category (subcategory already has a category)
+    // If subcategoryId is provided in request, update it
+    if (subcategoryId !== undefined) {
+      updateData.subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
+      // If a valid subcategory is set, category should be null (subcategory already has a category)
+      if (subcategoryId && subcategoryId !== '-') {
+        updateData.categoryId = null
+      } else {
+        // If subcategoryId is "-" or empty, allow categoryId to be set
+        if (categoryId !== undefined) {
+          updateData.categoryId = categoryId && categoryId !== '-' ? categoryId : null
+        }
+      }
+    } else if (categoryId !== undefined) {
+      // If subcategoryId is not provided but categoryId is, set categoryId
+      updateData.categoryId = categoryId && categoryId !== '-' ? categoryId : null
+    }
+    
     // Update product with audit tracking
     // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
     await withAuditUser(prisma, user.id, async (tx) => {
       // Update product
       await tx.produk.update({
         where: { id },
-        data: {
-          name,
-          description,
-          kapasitas,
-          status: (status as ProductStatus) || ProductStatus.ACTIVE,
-          harga: harga ?? undefined,
-          images,
-          subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
-          categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
-          updatedBy,
-          updateNotes
-        }
+        data: updateData
       })
 
       // Update details

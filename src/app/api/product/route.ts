@@ -126,12 +126,16 @@ export async function POST(request: NextRequest) {
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
-    if ((!subcategoryId || subcategoryId === '-') && (!categoryId || categoryId === '-')) {
-      return NextResponse.json({ error: 'Either category or subcategory is required' }, { status: 400 })
-    }
 
     const prisma = createPrismaClient()
     const product = await withAuditUser(prisma, user.id, async (tx) => {
+      // Prepare data for category and subcategory
+      // If subcategory is provided, use it (subcategory already has a category)
+      // Otherwise, use category if provided
+      // If both are "-" or empty, set both to null (product with only brand)
+      const subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
+      const categoryIdValue = (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : null
+
       return await tx.produk.create({
         data: {
           name,
@@ -140,8 +144,8 @@ export async function POST(request: NextRequest) {
           status: (status as ProductStatus) || ProductStatus.ACTIVE,
           harga: harga ?? undefined,
           images,
-          subkategoriProdukId: subcategoryId && subcategoryId !== '-' ? subcategoryId : undefined,
-          categoryId: (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : undefined,
+          subkategoriProdukId,
+          categoryId: categoryIdValue,
           createdBy: user.email || 'system',
           detailProduks: {
             create: (details as DetailInput[]).map((detail: DetailInput) => ({
