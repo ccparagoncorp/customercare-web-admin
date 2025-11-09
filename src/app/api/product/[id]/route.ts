@@ -120,7 +120,7 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json() as ProductUpdateBody
+    const body = await request.json() as ProductUpdateBody & { brandId?: string }
     const { 
       name, 
       description, 
@@ -132,7 +132,8 @@ export async function PUT(
       details = [],
       updateNotes,
       updatedBy,
-      harga
+      harga,
+      brandId
     } = body
 
     if (!name) {
@@ -161,49 +162,154 @@ export async function PUT(
       updateNotes
     }
 
-    // Handle category and subcategory using Prisma relation syntax
-    // Priority: subcategory > category (subcategory already has a category)
-    // If subcategoryId is provided in request
-    if (subcategoryId !== undefined) {
-      if (subcategoryId && subcategoryId !== '-') {
-        // Connect to subcategory (this automatically handles category through relation)
-        updateData.subkategoriProduk = { connect: { id: subcategoryId } }
-        updateData.kategoriProduk = { disconnect: true }
-      } else {
-        // subcategoryId is "-" or empty, disconnect subcategory
-        updateData.subkategoriProduk = { disconnect: true }
-        // Handle categoryId
-        if (categoryId !== undefined) {
-          if (categoryId && categoryId !== '-') {
-            updateData.kategoriProduk = { connect: { id: categoryId } }
-          } else {
-            // categoryId is "-" or empty, disconnect category (product with only brand)
-            updateData.kategoriProduk = { disconnect: true }
-          }
-        }
-        // If categoryId is not provided but subcategoryId is "-", 
-        // we still disconnect subcategory (category remains unchanged)
-      }
-    } else if (categoryId !== undefined) {
-      // Only categoryId is provided (subcategoryId not in request)
-      if (categoryId && categoryId !== '-') {
-        updateData.kategoriProduk = { connect: { id: categoryId } }
-        // Disconnect subcategory if it exists (category takes priority when no subcategory in request)
-        updateData.subkategoriProduk = { disconnect: true }
-      } else {
-        // categoryId is "-" or empty, disconnect category (product with only brand)
-        updateData.kategoriProduk = { disconnect: true }
-        // Note: subcategoryId not in request, so it remains unchanged
-      }
-    }
-    
     // Update product with audit tracking
     // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
     await withAuditUser(prisma, user.id, async (tx) => {
+      // Handle category and subcategory
+      // Priority: subcategory > category (subcategory already has a category)
+      let finalCategoryId: string | null = null
+      let finalSubcategoryId: string | null = null
+
+      if (subcategoryId !== undefined) {
+        if (subcategoryId && subcategoryId !== '-') {
+          // Connect to subcategory (this automatically handles category through relation)
+          finalSubcategoryId = subcategoryId
+          finalCategoryId = null
+        } else {
+          // subcategoryId is "-" or empty, disconnect subcategory
+          finalSubcategoryId = null
+          // Handle categoryId
+          if (categoryId !== undefined) {
+            if (categoryId && categoryId !== '-') {
+              finalCategoryId = categoryId
+            } else if ((!categoryId || categoryId === '-') && brandId) {
+              // If category is "-" or empty but brandId is provided, 
+              // find or create a default category named "-" for this brand
+              let defaultCategory = await tx.kategoriProduk.findFirst({
+                where: {
+                  name: '-',
+                  brandId: brandId
+                }
+              })
+
+              if (!defaultCategory) {
+                // Create default category for brand
+                defaultCategory = await tx.kategoriProduk.create({
+                  data: {
+                    name: '-',
+                    brandId: brandId,
+                    images: [],
+                    createdBy: user.email || 'system'
+                  }
+                })
+              }
+
+              finalCategoryId = defaultCategory.id
+            } else {
+              // categoryId is "-" or empty and no brandId, disconnect category
+              finalCategoryId = null
+            }
+          } else if (brandId) {
+            // categoryId not provided but brandId is, find or create default category
+            let defaultCategory = await tx.kategoriProduk.findFirst({
+              where: {
+                name: '-',
+                brandId: brandId
+              }
+            })
+
+            if (!defaultCategory) {
+              defaultCategory = await tx.kategoriProduk.create({
+                data: {
+                  name: '-',
+                  brandId: brandId,
+                  images: [],
+                  createdBy: user.email || 'system'
+                }
+              })
+            }
+
+            finalCategoryId = defaultCategory.id
+          }
+        }
+      } else if (categoryId !== undefined) {
+        // Only categoryId is provided (subcategoryId not in request)
+        if (categoryId && categoryId !== '-') {
+          finalCategoryId = categoryId
+          finalSubcategoryId = null
+        } else if ((!categoryId || categoryId === '-') && brandId) {
+          // categoryId is "-" or empty but brandId is provided, find or create default category
+          let defaultCategory = await tx.kategoriProduk.findFirst({
+            where: {
+              name: '-',
+              brandId: brandId
+            }
+          })
+
+          if (!defaultCategory) {
+            defaultCategory = await tx.kategoriProduk.create({
+              data: {
+                name: '-',
+                brandId: brandId,
+                images: [],
+                createdBy: user.email || 'system'
+              }
+            })
+          }
+
+          finalCategoryId = defaultCategory.id
+          finalSubcategoryId = null
+        } else {
+          // categoryId is "-" or empty and no brandId, disconnect category
+          finalCategoryId = null
+        }
+      } else if (brandId) {
+        // Neither categoryId nor subcategoryId provided, but brandId is provided
+        // Find or create default category for brand
+        let defaultCategory = await tx.kategoriProduk.findFirst({
+          where: {
+            name: '-',
+            brandId: brandId
+          }
+        })
+
+        if (!defaultCategory) {
+          defaultCategory = await tx.kategoriProduk.create({
+            data: {
+              name: '-',
+              brandId: brandId,
+              images: [],
+              createdBy: user.email || 'system'
+            }
+          })
+        }
+
+        finalCategoryId = defaultCategory.id
+        finalSubcategoryId = null
+      }
+
+      // Prepare update data with category and subcategory
+      const finalUpdateData: Prisma.ProdukUpdateInput = {
+        ...updateData
+      }
+
+      // Set category and subcategory using relation syntax
+      if (finalSubcategoryId !== null) {
+        finalUpdateData.subkategoriProduk = { connect: { id: finalSubcategoryId } }
+        finalUpdateData.kategoriProduk = { disconnect: true }
+      } else {
+        finalUpdateData.subkategoriProduk = { disconnect: true }
+        if (finalCategoryId !== null) {
+          finalUpdateData.kategoriProduk = { connect: { id: finalCategoryId } }
+        } else {
+          finalUpdateData.kategoriProduk = { disconnect: true }
+        }
+      }
+
       // Update product
       await tx.produk.update({
         where: { id },
-        data: updateData
+        data: finalUpdateData
       })
 
       // Update details
@@ -237,7 +343,11 @@ export async function PUT(
             }
           }
         },
-        kategoriProduk: true,
+        kategoriProduk: {
+          include: {
+            brand: true
+          }
+        },
         detailProduks: true
       }
     }))

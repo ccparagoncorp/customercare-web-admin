@@ -120,7 +120,8 @@ export async function POST(request: NextRequest) {
       subcategoryId,
       details = [],
       harga,
-      categoryId
+      categoryId,
+      brandId
     } = body
 
     if (!name) {
@@ -132,9 +133,43 @@ export async function POST(request: NextRequest) {
       // Prepare data for category and subcategory
       // If subcategory is provided, use it (subcategory already has a category)
       // Otherwise, use category if provided
-      // If both are "-" or empty, set both to null (product with only brand)
-      const subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
-      const categoryIdValue = (!subcategoryId || subcategoryId === '-') && categoryId && categoryId !== '-' ? categoryId : null
+      // If both are "-" or empty but brandId is provided, create/get default category for brand
+      let subkategoriProdukId = subcategoryId && subcategoryId !== '-' ? subcategoryId : null
+      let categoryIdValue: string | null = null
+
+      if (subcategoryId && subcategoryId !== '-') {
+        // If subcategory is provided, use it (category is automatically linked through subcategory)
+        categoryIdValue = null
+      } else if (categoryId && categoryId !== '-') {
+        // If category is provided and not "-", use it
+        categoryIdValue = categoryId
+      } else if ((!categoryId || categoryId === '-') && brandId) {
+        // If category is "-" or empty but brandId is provided, 
+        // find or create a default category named "-" for this brand
+        let defaultCategory = await tx.kategoriProduk.findFirst({
+          where: {
+            name: '-',
+            brandId: brandId
+          }
+        })
+
+        if (!defaultCategory) {
+          // Create default category for brand
+          defaultCategory = await tx.kategoriProduk.create({
+            data: {
+              name: '-',
+              brandId: brandId,
+              images: [],
+              createdBy: user.email || 'system'
+            }
+          })
+        }
+
+        categoryIdValue = defaultCategory.id
+      } else {
+        // No category, no brand, set to null (product with only brand - but this shouldn't happen if brand is selected)
+        categoryIdValue = null
+      }
 
       return await tx.produk.create({
         data: {
