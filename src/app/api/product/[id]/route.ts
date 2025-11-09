@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
-import { ProductStatus } from '@prisma/client'
+import { Prisma, ProductStatus } from '@prisma/client'
 
 interface SessionUser {
   id: string
@@ -150,7 +150,7 @@ export async function PUT(
     const prisma = createPrismaClient()
     
     // Prepare update data
-    const updateData: any = {
+    const updateData: Prisma.ProdukUpdateInput = {
       name,
       description,
       kapasitas,
@@ -169,11 +169,9 @@ export async function PUT(
       // If a valid subcategory is set, category should be null (subcategory already has a category)
       if (subcategoryId && subcategoryId !== '-') {
         updateData.categoryId = null
-      } else {
+      } else if (categoryId !== undefined) {
         // If subcategoryId is "-" or empty, allow categoryId to be set
-        if (categoryId !== undefined) {
-          updateData.categoryId = categoryId && categoryId !== '-' ? categoryId : null
-        }
+        updateData.categoryId = categoryId && categoryId !== '-' ? categoryId : null
       }
     } else if (categoryId !== undefined) {
       // If subcategoryId is not provided but categoryId is, set categoryId
