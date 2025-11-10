@@ -1,278 +1,321 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { Bell, X, CheckCircle2, AlertCircle, Trash2, Info } from 'lucide-react'
-import { apiGet } from '@/lib/api-client'
+import { useEffect, useState, useRef } from "react"
+import { Bell, X, Check, Clock } from "lucide-react"
+import Link from "next/link"
 
 interface Notification {
   id: string
+  type: string
+  title: string
+  message: string
   sourceTable: string
   sourceKey: string
-  actionType: 'INSERT' | 'UPDATE' | 'DELETE'
-  changedAt: string
+  recordName: string | null // Name of the record for link generation
+  parentInfo: { brandName?: string; categoryName?: string; subcategoryName?: string; kategoriSOP?: string } | null // Parent info for link generation
+  fieldName: string
   changedBy: string | null
-  brandId: string | null
-  categoryId: string | null
-  subcategoryId: string | null
-  knowledgeId: string | null
-  sopId: string | null
-  qualityTrainingId: string | null
-  changes: Array<{
-    fieldName: string
-    oldValue: string | null
-    newValue: string | null
-  }>
+  changedAt: string
+  isRead: boolean
 }
 
 interface NotificationBellProps {
-  unreadCount?: number
+  onNotificationsRead?: () => void
 }
 
-const STORAGE_KEY = 'notification_read_ids'
-const LAST_VIEWED_KEY = 'notification_last_viewed'
-const MAX_STORAGE_AGE = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
-
-// Get read notification IDs from localStorage
-function getReadNotificationIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set()
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return new Set()
-    
-    const data = JSON.parse(stored)
-    const now = Date.now()
-    
-    // Filter out old entries (older than 7 days)
-    const validEntries = data.filter((entry: { id: string; timestamp: number }) => {
-      return now - entry.timestamp < MAX_STORAGE_AGE
-    })
-    
-    // Update localStorage with cleaned data
-    if (validEntries.length !== data.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(validEntries))
-    }
-    
-    return new Set(validEntries.map((entry: { id: string }) => entry.id))
-  } catch {
-    return new Set()
-  }
-}
-
-// Get last viewed timestamp
-function getLastViewedTimestamp(): number {
-  if (typeof window === 'undefined') return 0
-  
-  try {
-    const stored = localStorage.getItem(LAST_VIEWED_KEY)
-    if (!stored) return 0
-    return parseInt(stored, 10)
-  } catch {
-    return 0
-  }
-}
-
-// Update last viewed timestamp
-function updateLastViewedTimestamp() {
-  if (typeof window === 'undefined') return
-  
-  try {
-    localStorage.setItem(LAST_VIEWED_KEY, Date.now().toString())
-  } catch (error) {
-    console.error('Error updating last viewed timestamp:', error)
-  }
-}
-
-// Save read notification ID to localStorage
-function markNotificationAsRead(notificationId: string) {
-  if (typeof window === 'undefined') return
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const data: Array<{ id: string; timestamp: number }> = stored ? JSON.parse(stored) : []
-    
-    // Check if already exists
-    if (data.some(entry => entry.id === notificationId)) {
-      return
-    }
-    
-    // Add new entry
-    data.push({
-      id: notificationId,
-      timestamp: Date.now(),
-    })
-    
-    // Keep only last 1000 entries to avoid localStorage overflow
-    const cleanedData = data.slice(-1000)
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedData))
-  } catch (error) {
-    console.error('Error saving read notification:', error)
-  }
-}
-
-// Mark multiple notifications as read
-function markNotificationsAsRead(notificationIds: string[]) {
-  notificationIds.forEach(id => markNotificationAsRead(id))
-}
-
-export function NotificationBell({}: NotificationBellProps) {
-  const router = useRouter()
+export function NotificationBell({ onNotificationsRead }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set())
-  const [lastViewedTimestamp, setLastViewedTimestamp] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const notificationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
-  const observerRef = useRef<IntersectionObserver | null>(null)
-
-  // Load read notification IDs and last viewed timestamp from localStorage on mount
+  const [loading, setLoading] = useState(true)
+  const [readIds, setReadIds] = useState<Set<string>>(new Set())
+  const readIdsRef = useRef<Set<string>>(new Set())
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  
+  // Sync ref with state
   useEffect(() => {
-    setReadNotificationIds(getReadNotificationIds())
-    setLastViewedTimestamp(getLastViewedTimestamp())
-  }, [])
+    readIdsRef.current = readIds
+  }, [readIds])
 
-  // Calculate actual unread count
-  // Count notifications that are newer than lastViewedTimestamp or haven't been read
-  const unreadCount = notifications.filter(n => {
-    const notificationTime = new Date(n.changedAt).getTime()
-    const isNewerThanLastViewed = notificationTime > lastViewedTimestamp
-    const isNotRead = !readNotificationIds.has(n.id)
-    return isNewerThanLastViewed || isNotRead
-  }).length
-
-  // Fetch notifications with proper error handling
+  // Fetch notifications
   const fetchNotifications = async () => {
-    setLoading(true)
     try {
-      const result = await apiGet<{ notifications: Notification[] }>('/api/notifications?limit=20', {
-        timeout: 5000, // 5 second timeout
-        retries: 1, // Retry once on failure
-      })
-
-      if (result.ok && result.data) {
-        setNotifications(result.data.notifications || [])
-      } else {
-        // Silently handle error - don't show notifications if fetch fails
-        // Error is already handled by apiGet, no need to log or throw
-        setNotifications([])
+      setLoading(true)
+      const response = await fetch('/api/notifications?limit=50')
+      if (response.ok) {
+        const data = await response.json()
+        const notifications = data.notifications || []
+        
+        // Get read notification IDs from localStorage for visual indication only
+        const readIdsFromStorage = JSON.parse(localStorage.getItem('readNotifications') || '[]') as string[]
+        setReadIds(new Set(readIdsFromStorage))
+        
+        // Mark notifications as read if they're in localStorage (for visual only)
+        const notificationsWithReadStatus = notifications.map((notif: Notification) => ({
+          ...notif,
+          isRead: readIdsFromStorage.includes(notif.id),
+        }))
+        
+        setNotifications(notificationsWithReadStatus)
       }
-    } catch {
-      // Fallback error handling (should not happen with safeFetch, but just in case)
-      setNotifications([])
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Mark notification as read
-  const markAsRead = useCallback((notificationId: string) => {
-    if (readNotificationIds.has(notificationId)) return
-    
-    markNotificationAsRead(notificationId)
-    setReadNotificationIds(prev => {
-      const next = new Set(prev)
-      next.add(notificationId)
-      return next
-    })
-  }, [readNotificationIds])
+  // Mark notifications as read
+  const markAsRead = async (notificationIds: string[]): Promise<void> => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notificationIds }),
+      })
 
-  // Setup Intersection Observer to mark notifications as read when scrolled into view
-  useEffect(() => {
-    if (!isOpen || notifications.length === 0) {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
+      if (response.ok) {
+        // Get current read IDs from localStorage
+        const currentReadIds = JSON.parse(localStorage.getItem('readNotifications') || '[]') as string[]
+        
+        // Add new read IDs
+        const newReadIds = [...new Set([...currentReadIds, ...notificationIds])]
+        
+        // Save to localStorage FIRST
+        localStorage.setItem('readNotifications', JSON.stringify(newReadIds))
+        
+        // Update local state
+        const newReadIdsSet = new Set(newReadIds)
+        setReadIds(newReadIdsSet)
+        
+        // Update notifications to mark as read
+        setNotifications(prev => 
+          prev.map(notif => 
+            notificationIds.includes(notif.id) 
+              ? { ...notif, isRead: true }
+              : notif
+          )
+        )
+
+        // Notify parent component (Header) to refresh unread count
+        // Use setTimeout to ensure localStorage is written and state is updated
+        setTimeout(() => {
+          // Dispatch event first
+          window.dispatchEvent(new CustomEvent('notifications-updated'))
+          
+          // Then call callback
+          if (onNotificationsRead) {
+            onNotificationsRead()
+          }
+        }, 150)
       }
-      return
+    } catch (error) {
+      console.error('Error marking notifications as read:', error)
     }
+  }
 
-    // Create Intersection Observer
+  // Use Intersection Observer to mark notifications as read when they come into view
+  useEffect(() => {
+    if (!isOpen || !scrollContainerRef.current || notifications.length === 0) return
+
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
+        const visibleIds: string[] = []
+        
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const notificationId = entry.target.getAttribute('data-notification-id')
             if (notificationId) {
-              markAsRead(notificationId)
+              // Check if not already marked as read using ref
+              if (!readIdsRef.current.has(notificationId)) {
+                // Check if notification exists and is unread
+                const notification = notifications.find(n => n.id === notificationId)
+                if (notification && !notification.isRead) {
+                  visibleIds.push(notificationId)
+                }
+              }
             }
           }
         })
+
+        // Mark visible notifications as read (batch every 3 items)
+        if (visibleIds.length > 0) {
+          const idsToMark = visibleIds.slice(0, 3)
+          markAsRead(idsToMark)
+        }
       },
       {
-        root: dropdownRef.current?.querySelector('.overflow-y-auto'),
+        root: scrollContainerRef.current,
         rootMargin: '0px',
-        threshold: 0.3, // Mark as read when 30% visible
+        threshold: 0.5, // Mark as read when 50% visible
       }
     )
 
-    observerRef.current = observer
-
-    // Observe all notification elements after a short delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      notificationRefs.current.forEach((element) => {
-        if (element && observer) {
-          observer.observe(element)
-        }
-      })
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        const notificationElements = scrollContainerRef.current.querySelectorAll('[data-notification-id]')
+        notificationElements.forEach((el) => observer.observe(el))
+      }
     }, 100)
 
     return () => {
-      clearTimeout(timer)
-      if (observer) {
-        observer.disconnect()
-      }
+      clearTimeout(timeoutId)
+      observer.disconnect()
     }
-  }, [isOpen, notifications, markAsRead])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, notifications.length]) // Only depend on length to avoid re-creating observer too often
 
-  // Update last viewed timestamp and mark notifications as read when dropdown is opened
-  useEffect(() => {
-    if (isOpen && notifications.length > 0) {
-      // Update last viewed timestamp immediately when dropdown opens
-      const currentTime = Date.now()
-      updateLastViewedTimestamp()
-      setLastViewedTimestamp(currentTime)
+  // Handle scroll to mark all as read when scrolled to bottom
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return
+
+    const container = scrollContainerRef.current
+    const scrollTop = container.scrollTop
+    const scrollHeight = container.scrollHeight
+    const clientHeight = container.clientHeight
+
+    // Mark all as read when scrolled to bottom
+    if (scrollTop + clientHeight >= scrollHeight - 10) {
+      const unreadIds = notifications
+        .filter(notif => !readIds.has(notif.id) && !notif.isRead)
+        .map(notif => notif.id)
       
-      // Mark all notifications as read after user has viewed them for 2 seconds
-      const timer = setTimeout(() => {
-        const idsToMark = notifications
-          .map(n => n.id)
-          .filter(id => !readNotificationIds.has(id))
-        
-        if (idsToMark.length > 0) {
-          markNotificationsAsRead(idsToMark)
-          setReadNotificationIds(prev => {
-            const next = new Set(prev)
-            idsToMark.forEach(id => next.add(id))
-            return next
-          })
-        }
-      }, 2000) // Mark as read after 2 seconds of viewing dropdown
-
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, notifications, readNotificationIds])
-
-  // Fetch notifications on mount and when dropdown opens
-  useEffect(() => {
-    fetchNotifications()
-    
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(() => {
-      if (!isOpen) {
-        fetchNotifications()
+      if (unreadIds.length > 0) {
+        markAsRead(unreadIds)
       }
-    }, 30000)
+    }
+  }
 
-    return () => clearInterval(interval)
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications()
+      // Set up polling to refresh notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000)
+      return () => clearInterval(interval)
+    }
   }, [isOpen])
+
+  // Calculate unread count
+  const unreadCount = notifications.filter(notif => {
+    const isRead = readIds.has(notif.id) || notif.isRead
+    return !isRead
+  }).length
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  // Get action type color
+  const getActionTypeColor = (actionType: string) => {
+    switch (actionType.toUpperCase()) {
+      case 'INSERT':
+      case 'CREATE':
+        return 'bg-green-100 text-green-800'
+      case 'UPDATE':
+        return 'bg-blue-100 text-blue-800'
+      case 'DELETE':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Helper function to slugify text for URL
+  const slugify = (text: string | null): string => {
+    if (!text) return ''
+    return text.toLowerCase().trim().replace(/\s+/g, '-')
+  }
+
+  // Get notification link based on source table (for admin routes)
+  const getNotificationLink = (notification: Notification): string => {
+    const sourceTable = notification.sourceTable
+    const recordName = notification.recordName
+    const parentInfo = notification.parentInfo
+
+    // For admin, we'll link to tracking pages or edit pages
+    // If we don't have record name, return general page for the module
+    if (!recordName) {
+      if (sourceTable === 'brands' || sourceTable.startsWith('kategori_produks') || sourceTable.startsWith('subkategori_produks') || sourceTable.startsWith('produks') || sourceTable.startsWith('detail_produks')) {
+        return '/admin/products' // General products page
+      } else if (sourceTable.startsWith('sops') || sourceTable.startsWith('kategori_sops') || sourceTable.startsWith('jenis_sops') || sourceTable.startsWith('detail_sops')) {
+        return '/admin/sop' // General SOP page
+      } else if (sourceTable.startsWith('knowledges') || sourceTable.startsWith('detail_knowledges') || sourceTable.startsWith('jenis_detail_knowledges') || sourceTable.startsWith('produk_jenis_detail_knowledges')) {
+        return '/admin/knowledge' // General knowledge page
+      } else if (sourceTable.startsWith('quality_trainings') || sourceTable.startsWith('jenis_quality_trainings') || sourceTable.startsWith('detail_quality_trainings') || sourceTable.startsWith('subdetail_quality_trainings')) {
+        return '/admin/quality-training' // General quality training page
+      }
+      return '#'
+    }
+
+    // For admin, we need to get the ID from sourceKey or use parentInfo to construct the link
+    // Since we don't have direct ID mapping, we'll use a generic approach
+    // For brands, we can link to the tracking page if we have the sourceKey
+    switch (sourceTable) {
+      case 'brands':
+        // Try to use sourceKey as brand ID for tracking page
+        return `/admin/products/brand/${notification.sourceKey}/tracking`
+      
+      case 'kategori_produks':
+      case 'subkategori_produks':
+      case 'produks':
+      case 'detail_produks':
+        // For products-related, go to products page
+        return '/admin/products'
+      
+      case 'knowledges':
+      case 'detail_knowledges':
+      case 'jenis_detail_knowledges':
+      case 'produk_jenis_detail_knowledges':
+        return '/admin/knowledge'
+      
+      case 'kategori_sops':
+      case 'sops':
+      case 'jenis_sops':
+      case 'detail_sops':
+        return '/admin/sop'
+      
+      case 'quality_trainings':
+      case 'jenis_quality_trainings':
+      case 'detail_quality_trainings':
+      case 'subdetail_quality_trainings':
+        return '/admin/quality-training'
+      
+      default:
+        return '#'
+    }
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+      if (isOpen) {
+        const target = event.target as Node
+        const dropdown = document.querySelector('[data-notification-dropdown]')
+        const bellButton = document.querySelector('[data-notification-bell]')
+        
+        if (dropdown && !dropdown.contains(target) && bellButton && !bellButton.contains(target)) {
+          setIsOpen(false)
+        }
       }
     }
 
@@ -285,107 +328,11 @@ export function NotificationBell({}: NotificationBellProps) {
     }
   }, [isOpen])
 
-  // Refresh when dropdown opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications()
-    }
-  }, [isOpen])
-
-  const getActionIcon = (actionType: string) => {
-    switch (actionType) {
-      case 'INSERT':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />
-      case 'UPDATE':
-        return <Info className="h-4 w-4 text-blue-600" />
-      case 'DELETE':
-        return <Trash2 className="h-4 w-4 text-red-600" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />
-    }
-  }
-
-  const getActionColor = (actionType: string) => {
-    switch (actionType) {
-      case 'INSERT':
-        return 'bg-green-100 text-green-800'
-      case 'UPDATE':
-        return 'bg-blue-100 text-blue-800'
-      case 'DELETE':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getActionLabel = (actionType: string) => {
-    switch (actionType) {
-      case 'INSERT':
-        return 'Ditambahkan'
-      case 'UPDATE':
-        return 'Diubah'
-      case 'DELETE':
-        return 'Dihapus'
-      default:
-        return actionType
-    }
-  }
-
-  const getTableLabel = (tableName: string) => {
-    const tableLabels: Record<string, string> = {
-      'produks': 'Produk',
-      'brands': 'Brand',
-      'kategori_produks': 'Kategori Produk',
-      'subkategori_produks': 'Subkategori Produk',
-      'users': 'User',
-      'agents': 'Agent',
-      'sops': 'SOP',
-      'knowledges': 'Knowledge',
-      'quality_trainings': 'Quality Training',
-    }
-    return tableLabels[tableName] || tableName
-  }
-
-  const formatNotificationMessage = (notification: Notification) => {
-    const tableLabel = getTableLabel(notification.sourceTable)
-    const actionLabel = getActionLabel(notification.actionType)
-    const changeCount = notification.changes.length
-    
-    if (changeCount === 1) {
-      const change = notification.changes[0]
-      return `${tableLabel} "${change.fieldName}" ${actionLabel.toLowerCase()}`
-    }
-    
-    return `${tableLabel} - ${changeCount} perubahan ${actionLabel.toLowerCase()}`
-  }
-
-  const formatTimeAgo = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      const now = new Date()
-      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-      
-      if (diffInSeconds < 60) {
-        return 'Baru saja'
-      } else if (diffInSeconds < 3600) {
-        const minutes = Math.floor(diffInSeconds / 60)
-        return `${minutes} menit yang lalu`
-      } else if (diffInSeconds < 86400) {
-        const hours = Math.floor(diffInSeconds / 3600)
-        return `${hours} jam yang lalu`
-      } else {
-        const days = Math.floor(diffInSeconds / 86400)
-        return `${days} hari yang lalu`
-      }
-    } catch {
-      return 'Baru saja'
-    }
-  }
-
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       {/* Bell Button */}
       <button
+        data-notification-bell
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
         aria-label="Notifications"
@@ -400,177 +347,90 @@ export function NotificationBell({}: NotificationBellProps) {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-[100] max-h-[600px] flex flex-col" style={{ top: '100%' }}>
+        <div 
+          data-notification-dropdown
+          className="fixed right-4 top-14 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-[600px] flex flex-col z-50"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Notifikasi</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <X className="h-4 w-4 text-gray-500" />
+              <X className="h-5 w-5 text-gray-500" />
             </button>
           </div>
 
           {/* Notifications List */}
-          <div className="overflow-y-auto flex-1">
-            {loading && notifications.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto"
+          >
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#03438f] mx-auto mb-2"></div>
+                <p className="text-sm text-gray-500">Loading notifications...</p>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                <Bell className="h-12 w-12 mb-2 opacity-50" />
-                <p className="text-sm">Tidak ada notifikasi</p>
+              <div className="p-8 text-center">
+                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">No notifications</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {notifications.map((notification) => {
-                  const isRead = readNotificationIds.has(notification.id)
+                  const isRead = readIds.has(notification.id) || notification.isRead
                   return (
-                    <div
+                    <Link
                       key={notification.id}
-                      ref={(el) => {
-                        if (el) {
-                          notificationRefs.current.set(notification.id, el)
-                        } else {
-                          notificationRefs.current.delete(notification.id)
-                        }
-                      }}
                       data-notification-id={notification.id}
-                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 ${
-                        isRead 
-                          ? 'border-transparent opacity-75' 
-                          : 'border-[#03438f] bg-blue-50/30'
-                      } hover:border-[#03438f]`}
+                      href={getNotificationLink(notification)}
                       onClick={() => {
-                        // Mark as read when clicked
-                        markAsRead(notification.id)
-                        setIsOpen(false)
-                        
-                        // Navigate based on source table and related IDs
-                        // If brandId exists, navigate to brand tracking page
-                        if (notification.brandId) {
-                          router.push(`/admin/products/brand/${notification.brandId}/tracking`)
-                        } else if (notification.sourceTable === 'produks') {
-                          router.push(`/admin/products/tracker`)
-                        } else if (notification.sourceTable === 'users') {
-                          router.push(`/admin/users`)
-                        } else if (notification.sourceTable === 'brands') {
-                          router.push(`/admin/products?tab=brand`)
-                        } else if (notification.sourceTable === 'sops' || notification.sopId) {
-                          router.push(`/admin/sop`)
-                        } else if (notification.sourceTable === 'knowledges' || notification.knowledgeId) {
-                          router.push(`/admin/knowledge`)
-                        } else if (notification.sourceTable === 'quality_trainings' || notification.qualityTrainingId) {
-                          router.push(`/admin/quality-training`)
-                        } else {
-                          // Default to dashboard
-                          router.push(`/admin/dashboard`)
+                        if (!isRead) {
+                          markAsRead([notification.id])
                         }
+                        setIsOpen(false)
                       }}
+                      className={`block p-4 hover:bg-gray-50 transition-colors ${
+                        !isRead ? 'bg-blue-50/50' : ''
+                      }`}
                     >
-                    <div className="flex items-start space-x-3">
-                      {/* Icon */}
-                      <div className="flex-shrink-0 mt-0.5">
-                        {getActionIcon(notification.actionType)}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getActionColor(notification.actionType)}`}>
-                            {notification.actionType}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatTimeAgo(notification.changedAt)}
+                      <div className="flex items-start gap-3">
+                        {/* Action Type Badge */}
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getActionTypeColor(notification.type)}`}>
+                          <span className="text-xs font-bold">
+                            {notification.type.charAt(0)}
                           </span>
                         </div>
 
-                        <p className="text-sm font-medium text-gray-900 mb-1">
-                          {formatNotificationMessage(notification)}
-                        </p>
-
-                        <div className="text-xs text-gray-600 space-y-1">
-                          <p>
-                            <span className="font-medium">Tabel:</span> {getTableLabel(notification.sourceTable)}
-                          </p>
-                          {notification.brandId && (
-                            <p>
-                              <span className="font-medium">Brand:</span>{' '}
-                              <span className="text-[#03438f] font-semibold">ID: {notification.brandId.substring(0, 12)}...</span>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className={`text-sm font-semibold ${!isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                              {notification.title}
                             </p>
-                          )}
-                          {notification.categoryId && (
-                            <p>
-                              <span className="font-medium">Kategori:</span> ID: {notification.categoryId.substring(0, 12)}...
-                            </p>
-                          )}
-                          {notification.subcategoryId && (
-                            <p>
-                              <span className="font-medium">Subkategori:</span> ID: {notification.subcategoryId.substring(0, 12)}...
-                            </p>
-                          )}
-                          {notification.knowledgeId && (
-                            <p>
-                              <span className="font-medium">Knowledge:</span> ID: {notification.knowledgeId.substring(0, 12)}...
-                            </p>
-                          )}
-                          {notification.sopId && (
-                            <p>
-                              <span className="font-medium">SOP:</span> ID: {notification.sopId.substring(0, 12)}...
-                            </p>
-                          )}
-                          {notification.qualityTrainingId && (
-                            <p>
-                              <span className="font-medium">Quality Training:</span> ID: {notification.qualityTrainingId.substring(0, 12)}...
-                            </p>
-                          )}
-                          <p>
-                            <span className="font-medium">Record ID:</span> {notification.sourceKey.substring(0, 20)}...
-                          </p>
-                          {notification.changedBy && (
-                            <p>
-                              <span className="font-medium">Oleh:</span> {notification.changedBy}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Changes Preview */}
-                        {notification.changes.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <p className="text-xs font-medium text-gray-700 mb-1">Perubahan:</p>
-                            <div className="space-y-1">
-                              {notification.changes.slice(0, 3).map((change, idx) => (
-                                <div key={idx} className="text-xs text-gray-600">
-                                  <span className="font-medium">{change.fieldName}:</span>
-                                  {notification.actionType === 'UPDATE' && (
-                                    <>
-                                      {' '}
-                                      <span className="text-red-600 line-through">{change.oldValue?.substring(0, 20)}</span>
-                                      {' → '}
-                                      <span className="text-green-600">{change.newValue?.substring(0, 20)}</span>
-                                    </>
-                                  )}
-                                  {notification.actionType === 'INSERT' && (
-                                    <span className="text-green-600"> {change.newValue?.substring(0, 30)}</span>
-                                  )}
-                                  {notification.actionType === 'DELETE' && (
-                                    <span className="text-red-600"> {change.oldValue?.substring(0, 30)}</span>
-                                  )}
-                                </div>
-                              ))}
-                              {notification.changes.length > 3 && (
-                                <p className="text-xs text-gray-500 italic">
-                                  +{notification.changes.length - 3} perubahan lainnya
-                                </p>
-                              )}
-                            </div>
+                            {!isRead && (
+                              <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
+                            )}
                           </div>
-                        )}
+                          <p className="text-xs text-gray-600 mb-2">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-gray-500">
+                            {notification.changedBy && (
+                              <span>By {notification.changedBy}</span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDate(notification.changedAt)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </Link>
                   )
                 })}
               </div>
@@ -581,13 +441,56 @@ export function NotificationBell({}: NotificationBellProps) {
           {notifications.length > 0 && (
             <div className="p-3 border-t border-gray-200 bg-gray-50">
               <button
-                onClick={() => {
-                  router.push('/admin/products/tracker')
-                  setIsOpen(false)
+                onClick={async () => {
+                  // Get all notification IDs that are currently unread
+                  const allUnreadIds = notifications
+                    .filter(notif => {
+                      const isRead = readIds.has(notif.id) || notif.isRead
+                      return !isRead
+                    })
+                    .map(notif => notif.id)
+                  
+                  if (allUnreadIds.length > 0) {
+                    // Get current read IDs from localStorage
+                    const currentReadIds = JSON.parse(localStorage.getItem('readNotifications') || '[]') as string[]
+                    
+                    // Combine with new read IDs
+                    const newReadIds = [...new Set([...currentReadIds, ...allUnreadIds])]
+                    
+                    // Update localStorage FIRST (before calling markAsRead)
+                    localStorage.setItem('readNotifications', JSON.stringify(newReadIds))
+                    
+                    // Update local state immediately
+                    const newReadIdsSet = new Set(newReadIds)
+                    setReadIds(newReadIdsSet)
+                    
+                    // Update notifications state
+                    setNotifications(prev => 
+                      prev.map(notif => 
+                        allUnreadIds.includes(notif.id) 
+                          ? { ...notif, isRead: true }
+                          : notif
+                      )
+                    )
+                    
+                    // Call markAsRead (which will also update localStorage, but we already did it)
+                    await markAsRead(allUnreadIds)
+                    
+                    // Force refresh of Header unread count
+                    // Use multiple timeouts to ensure localStorage is read correctly
+                    setTimeout(() => {
+                      if (onNotificationsRead) {
+                        onNotificationsRead()
+                      }
+                      // Also dispatch event to ensure Header updates
+                      window.dispatchEvent(new CustomEvent('notifications-updated'))
+                    }, 500)
+                  }
                 }}
-                className="w-full text-center text-sm text-[#03438f] hover:text-[#012f65] font-medium"
+                className="w-full text-sm text-[#03438f] hover:text-[#012f65] font-medium flex items-center justify-center gap-2 py-2"
               >
-                Lihat Semua Notifikasi
+                <Check className="h-4 w-4" />
+                Mark all as read
               </button>
             </div>
           )}
@@ -596,4 +499,3 @@ export function NotificationBell({}: NotificationBellProps) {
     </div>
   )
 }
-

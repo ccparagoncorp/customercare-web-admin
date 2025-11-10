@@ -19,11 +19,14 @@ interface AuditLog {
   sourceTable: string
   sourceKey: string
   fieldName: string
+  displayFieldName?: string // Field name with table prefix for related tables
   oldValue: string | null
   newValue: string | null
   actionType: 'INSERT' | 'UPDATE' | 'DELETE'
   changedAt: string
   changedBy: string | null
+  changedByName?: string | null // User name (enriched from users table)
+  isRelated?: boolean // Flag to indicate if this is a related table change
 }
 
 function ProductTrackerContent() {
@@ -42,6 +45,7 @@ function ProductTrackerContent() {
       const params = new URLSearchParams({
         table: 'produks',
         limit: itemsPerPage.toString(),
+        includeRelated: 'true', // Always include related table changes
       })
 
       if (filterAction !== 'ALL') {
@@ -129,13 +133,15 @@ function ProductTrackerContent() {
         changedAt: log.changedAt,
         actionType: log.actionType,
         changedBy: log.changedBy,
+        changedByName: log.changedByName || null, // Store user name for display
         changes: [],
       }
     }
     acc[key].changes.push({
-      fieldName: log.fieldName,
+      fieldName: log.displayFieldName || log.fieldName, // Use displayFieldName if available (includes table prefix)
       oldValue: log.oldValue,
       newValue: log.newValue,
+      isRelated: log.isRelated || false, // Track if this is a related table change
     })
     return acc
   }, {} as Record<string, {
@@ -143,10 +149,12 @@ function ProductTrackerContent() {
     changedAt: string
     actionType: string
     changedBy: string | null
+    changedByName?: string | null
     changes: Array<{
       fieldName: string
       oldValue: string | null
       newValue: string | null
+      isRelated?: boolean
     }>
   }>)
 
@@ -306,14 +314,24 @@ function ProductTrackerContent() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-gray-400" />
-                          <span>{group.changedBy || 'System'}</span>
+                          <span>{group.changedByName || group.changedBy || 'System'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         <div className="space-y-1 max-w-md">
                           {group.changes.map((change, changeIdx) => (
-                            <div key={changeIdx} className="border-l-2 border-gray-200 pl-2">
-                              <div className="font-medium text-gray-700">{change.fieldName}:</div>
+                            <div 
+                              key={changeIdx} 
+                              className={`border-l-2 pl-2 ${change.isRelated ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}
+                            >
+                              <div className="font-medium text-gray-700 flex items-center gap-2">
+                                {change.fieldName}
+                                {change.isRelated && (
+                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                    Related
+                                  </span>
+                                )}
+                              </div>
                               {group.actionType === 'UPDATE' && (
                                 <div className="text-xs space-y-1">
                                   <div className="text-red-600">

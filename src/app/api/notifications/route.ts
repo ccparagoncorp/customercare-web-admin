@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { createPrismaClient } from '@/lib/prisma'
 
 interface SessionUser {
   id: string
@@ -15,8 +15,11 @@ interface Session {
   user: SessionUser
 }
 
-// GET /api/notifications - Get recent audit logs as notifications
 export async function GET(request: NextRequest) {
+  const prisma = createPrismaClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaClient = prisma as any
+
   try {
     const session = await getServerSession(authOptions) as Session | null
     if (!session || !session.user) {
@@ -29,179 +32,430 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '20')
-    const since = searchParams.get('since') // Timestamp untuk get hanya notifikasi baru
+    const limit = parseInt(searchParams.get('limit') || '50')
 
-    const prisma = createPrismaClient()
-
-    try {
-      // Calculate 7 days ago timestamp (used for both queries)
-      const sevenDaysAgoDate = new Date()
-      sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7)
-
-      // Build query for notifications
-      // Use plain object type instead of Prisma types to avoid type errors
-      const queryWhere: {
-        changedAt: {
-          gte: Date
-          gt?: Date
+    // Fetch recent tracer updates as notifications (only the ones we're showing)
+    // Using type assertion because Prisma client may not be regenerated
+    const tracerUpdates = await (prismaClient.tracerUpdate.findMany as unknown as (
+      args: {
+        where?: Record<string, unknown>
+        orderBy?: { changedAt: 'desc' }
+        take?: number
+        select?: {
+          id: boolean
+          sourceTable: boolean
+          sourceKey: boolean
+          fieldName: boolean
+          actionType: boolean
+          changedAt: boolean
+          changedBy: boolean
         }
-      } = {
-        changedAt: {
-          gte: since ? new Date(since) : sevenDaysAgoDate,
-          ...(since ? { gt: new Date(since) } : {}),
-        },
       }
+    ) => Promise<Array<{
+      id: string
+      sourceTable: string
+      sourceKey: string
+      fieldName: string
+      actionType: string
+      changedAt: Date | string
+      changedBy: string | null
+    }>>)({
+      orderBy: {
+        changedAt: 'desc',
+      },
+      take: limit,
+      select: {
+        id: true,
+        sourceTable: true,
+        sourceKey: true,
+        fieldName: true,
+        actionType: true,
+        changedAt: true,
+        changedBy: true,
+      },
+    })
 
-      // Get notifications and unread count in parallel
-      // Type assertion: Prisma client includes tracerUpdate model after generation
-      // The model exists at runtime - using type assertion until TS server recognizes it
-      interface TracerUpdateFull {
-        id: string
-        sourceTable: string
-        sourceKey: string
-        fieldName: string
-        oldValue: string | null
-        newValue: string | null
-        actionType: string
-        changedAt: Date
-        changedBy: string | null
-        brandId: string | null
-        categoryId: string | null
-        subcategoryId: string | null
-        knowledgeId: string | null
-        sopId: string | null
-        qualityTrainingId: string | null
-      }
-
-      interface TracerUpdatePartial {
-        sourceTable: string
-        sourceKey: string
-        changedAt: Date
-      }
-
-      interface PrismaClientWithTracerUpdate {
-        tracerUpdate: {
-          findMany: (args?: {
-            where?: {
-              changedAt?: {
-                gte?: Date
-                gt?: Date
+    // Get changedBy names
+    const notifications = await Promise.all(
+      tracerUpdates.map(async (update) => {
+        let changedByName: string | null = null
+        if (update.changedBy) {
+          try {
+            const changedById = String(update.changedBy)
+            
+            // Try to find in User table first
+            const user = await prisma.user.findUnique({
+              where: { id: changedById },
+              select: { name: true },
+            })
+            
+            if (user) {
+              changedByName = user.name
+            } else {
+              // If not found in User, try Agent table
+              const agent = await prisma.agent.findUnique({
+                where: { id: changedById },
+                select: { name: true },
+              })
+              
+              if (agent) {
+                changedByName = agent.name
+              } else {
+                changedByName = changedById
               }
             }
-            orderBy?: {
-              changedAt?: 'asc' | 'desc'
-            }
-            take?: number
-            select?: {
-              sourceTable?: boolean
-              sourceKey?: boolean
-              changedAt?: boolean
-            }
-          }) => Promise<TracerUpdateFull[] | TracerUpdatePartial[]>
-        }
-        $disconnect: () => Promise<void>
-      }
-      const typedPrisma = prisma as unknown as PrismaClientWithTracerUpdate
-      
-      const [notifications, recentNotifications] = await Promise.all([
-        // Get recent audit logs for notifications list
-        withRetry(() => typedPrisma.tracerUpdate.findMany({
-          where: queryWhere,
-          orderBy: {
-            changedAt: 'desc',
-          },
-          take: limit * 10, // Get more to group them properly
-        })) as Promise<TracerUpdateFull[]>,
-        // Get recent notifications for unread count
-        withRetry(() => typedPrisma.tracerUpdate.findMany({
-          where: {
-            changedAt: {
-              gte: sevenDaysAgoDate,
-            },
-          },
-          select: {
-            sourceTable: true,
-            sourceKey: true,
-            changedAt: true,
-          },
-        })) as Promise<TracerUpdatePartial[]>
-      ])
-
-      // Group notifications by timestamp and sourceKey (same operation)
-      const groupedNotifications = notifications.reduce((acc, log) => {
-        const key = `${log.sourceTable}-${log.sourceKey}-${log.changedAt.getTime()}`
-        if (!acc[key]) {
-          acc[key] = {
-            id: key,
-            sourceTable: log.sourceTable,
-            sourceKey: log.sourceKey,
-            actionType: log.actionType,
-            changedAt: log.changedAt,
-            changedBy: log.changedBy,
-            brandId: log.brandId,
-            categoryId: log.categoryId,
-            subcategoryId: log.subcategoryId,
-            knowledgeId: log.knowledgeId,
-            sopId: log.sopId,
-            qualityTrainingId: log.qualityTrainingId,
-            changes: [],
+          } catch (err) {
+            console.warn(`Could not get changedBy name for ${update.changedBy}`, err)
+            changedByName = String(update.changedBy)
           }
         }
-        acc[key].changes.push({
-          fieldName: log.fieldName,
-          oldValue: log.oldValue,
-          newValue: log.newValue,
-        })
-        return acc
-      }, {} as Record<string, {
-        id: string
-        sourceTable: string
-        sourceKey: string
-        actionType: string
-        changedAt: Date
-        changedBy: string | null
-        brandId: string | null
-        categoryId: string | null
-        subcategoryId: string | null
-        knowledgeId: string | null
-        sopId: string | null
-        qualityTrainingId: string | null
-        changes: Array<{
-          fieldName: string
-          oldValue: string | null
-          newValue: string | null
-        }>
-      }>)
 
-      const notificationsArray = Object.values(groupedNotifications)
-        .sort((a, b) => b.changedAt.getTime() - a.changedAt.getTime())
-        .slice(0, limit) // Limit to requested number
-        .map(notif => ({
-          ...notif,
-          changedAt: notif.changedAt.toISOString(), // Convert Date to string
-        }))
+        // Format table name for display
+        const formatTableName = (tableName: string) => {
+          return tableName
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+        }
 
-      // Group and count unique notifications for unread count
-      const uniqueKeys = new Set<string>()
-      recentNotifications.forEach(log => {
-        const key = `${log.sourceTable}-${log.sourceKey}-${log.changedAt.getTime()}`
-        uniqueKeys.add(key)
+        // Get record name and parent info for link generation
+        let recordName: string | null = null
+        let parentInfo: { brandName?: string; categoryName?: string; subcategoryName?: string; kategoriSOP?: string } | null = null
+        try {
+          const sourceTableStr = String(update.sourceTable)
+          const sourceKeyStr = String(update.sourceKey)
+          
+          switch (sourceTableStr) {
+            case 'brands': {
+              const brand = await prisma.brand.findUnique({
+                where: { id: sourceKeyStr },
+                select: { name: true },
+              })
+              recordName = brand?.name || null
+              break
+            }
+            case 'kategori_produks': {
+              const category = await prisma.kategoriProduk.findUnique({
+                where: { id: sourceKeyStr },
+                select: { 
+                  name: true,
+                  brand: {
+                    select: { name: true }
+                  }
+                },
+              })
+              recordName = category?.name || null
+              if (category?.brand) {
+                parentInfo = { brandName: category.brand.name }
+              }
+              break
+            }
+            case 'subkategori_produks': {
+              const subcategory = await prisma.subkategoriProduk.findUnique({
+                where: { id: sourceKeyStr },
+                select: { 
+                  name: true,
+                  kategoriProduk: {
+                    select: {
+                      name: true,
+                      brand: {
+                        select: { name: true }
+                      }
+                    }
+                  }
+                },
+              })
+              recordName = subcategory?.name || null
+              if (subcategory?.kategoriProduk) {
+                parentInfo = {
+                  categoryName: subcategory.kategoriProduk.name,
+                  brandName: subcategory.kategoriProduk.brand?.name
+                }
+              }
+              break
+            }
+            case 'produks': {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const product = await (prismaClient.produk.findUnique as any)({
+                where: { id: sourceKeyStr },
+                select: { 
+                  name: true,
+                  brand: {
+                    select: { name: true }
+                  },
+                  kategoriProduk: {
+                    select: {
+                      name: true,
+                      brand: {
+                        select: { name: true }
+                      }
+                    }
+                  },
+                  subkategoriProduk: {
+                    select: {
+                      name: true,
+                      kategoriProduk: {
+                        select: {
+                          name: true,
+                          brand: {
+                            select: { name: true }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+              })
+              recordName = product?.name || null
+              if (product) {
+                if (product.subkategoriProduk) {
+                  parentInfo = {
+                    subcategoryName: product.subkategoriProduk.name,
+                    categoryName: product.subkategoriProduk.kategoriProduk?.name,
+                    brandName: product.subkategoriProduk.kategoriProduk?.brand?.name
+                  }
+                } else if (product.kategoriProduk) {
+                  parentInfo = {
+                    categoryName: product.kategoriProduk.name,
+                    brandName: product.kategoriProduk.brand?.name
+                  }
+                } else if (product.brand) {
+                  parentInfo = {
+                    brandName: product.brand.name
+                  }
+                }
+              }
+              break
+            }
+            case 'detail_produks': {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const detailProduk = await (prismaClient.detailProduk.findUnique as any)({
+                where: { id: sourceKeyStr },
+                select: {
+                  produk: {
+                    select: {
+                      name: true,
+                      brand: {
+                        select: { name: true }
+                      },
+                      kategoriProduk: {
+                        select: {
+                          name: true,
+                          brand: {
+                            select: { name: true }
+                          }
+                        }
+                      },
+                      subkategoriProduk: {
+                        select: {
+                          name: true,
+                          kategoriProduk: {
+                            select: {
+                              name: true,
+                              brand: {
+                                select: { name: true }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+              })
+              recordName = detailProduk?.produk?.name || null
+              if (detailProduk?.produk) {
+                const prod = detailProduk.produk
+                if (prod.subkategoriProduk) {
+                  parentInfo = {
+                    subcategoryName: prod.subkategoriProduk.name,
+                    categoryName: prod.subkategoriProduk.kategoriProduk?.name,
+                    brandName: prod.subkategoriProduk.kategoriProduk?.brand?.name
+                  }
+                } else if (prod.kategoriProduk) {
+                  parentInfo = {
+                    categoryName: prod.kategoriProduk.name,
+                    brandName: prod.kategoriProduk.brand?.name
+                  }
+                } else if (prod.brand) {
+                  parentInfo = {
+                    brandName: prod.brand.name
+                  }
+                }
+              }
+              break
+            }
+            case 'knowledges': {
+              const knowledge = await prisma.knowledge.findUnique({
+                where: { id: sourceKeyStr },
+                select: { title: true },
+              })
+              recordName = knowledge?.title || null
+              break
+            }
+            case 'sops': {
+              // Prisma generates SOP model as sOP
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const sop = await prismaClient.sOP.findUnique({
+                where: { id: sourceKeyStr },
+                select: { 
+                  name: true,
+                  kategoriSOP: {
+                    select: { name: true }
+                  }
+                },
+              })
+              recordName = sop?.name || null
+              if (sop?.kategoriSOP) {
+                parentInfo = { kategoriSOP: sop.kategoriSOP.name }
+              }
+              break
+            }
+            case 'kategori_sops': {
+              const kategoriSOP = await prisma.kategoriSOP.findUnique({
+                where: { id: sourceKeyStr },
+                select: { name: true },
+              })
+              recordName = kategoriSOP?.name || null
+              break
+            }
+            case 'jenis_sops': {
+              const jenisSOP = await prisma.jenisSOP.findUnique({
+                where: { id: sourceKeyStr },
+                select: { 
+                  name: true,
+                  sop: {
+                    select: {
+                      name: true,
+                      kategoriSOP: {
+                        select: { name: true }
+                      }
+                    }
+                  }
+                },
+              })
+              recordName = jenisSOP?.name || null
+              if (jenisSOP?.sop?.kategoriSOP) {
+                parentInfo = { kategoriSOP: jenisSOP.sop.kategoriSOP.name }
+              }
+              break
+            }
+            case 'detail_sops': {
+              const detailSOP = await prisma.detailSOP.findUnique({
+                where: { id: sourceKeyStr },
+                select: {
+                  jenisSOP: {
+                    select: {
+                      name: true,
+                      sop: {
+                        select: {
+                          name: true,
+                          kategoriSOP: {
+                            select: { name: true }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+              })
+              recordName = detailSOP?.jenisSOP?.name || null
+              if (detailSOP?.jenisSOP?.sop?.kategoriSOP) {
+                parentInfo = { kategoriSOP: detailSOP.jenisSOP.sop.kategoriSOP.name }
+              }
+              break
+            }
+          }
+        } catch (err) {
+          console.warn(`Could not get record name for ${update.sourceTable}:${update.sourceKey}`, err)
+        }
+
+        return {
+          id: update.id,
+          type: update.actionType,
+          title: `${formatTableName(update.sourceTable)} - ${update.fieldName}`,
+          message: `${update.actionType} operation on ${formatTableName(update.sourceTable)}`,
+          sourceTable: update.sourceTable,
+          sourceKey: update.sourceKey,
+          recordName: recordName, // Add record name for link generation
+          parentInfo: parentInfo, // Add parent info for link generation
+          fieldName: update.fieldName,
+          changedBy: changedByName,
+          changedAt: update.changedAt instanceof Date ? update.changedAt.toISOString() : String(update.changedAt),
+          // For now, all notifications are considered unread
+          // In production, you'd track this in a separate table
+          isRead: false,
+        }
       })
+    )
 
-      const unreadCount = uniqueKeys.size
-
-      return NextResponse.json({
-        notifications: notificationsArray,
-        unreadCount,
-        total: notificationsArray.length,
-      })
-    } finally {
-      await prisma.$disconnect()
-    }
+    // Unread count is the number of notifications we fetched (the recent ones)
+    // Client will filter based on localStorage to get actual unread count
+    return NextResponse.json({
+      notifications,
+      unreadCount: notifications.length, // Count of notifications we're showing
+      totalCount: notifications.length,
+    })
   } catch (error) {
     console.error('Error fetching notifications:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch notifications', notifications: [], unreadCount: 0, totalCount: 0 },
+      { status: 500 }
+    )
+  } finally {
+    try {
+      await prisma.$disconnect()
+    } catch (disconnectError) {
+      console.warn('Error disconnecting Prisma client:', disconnectError)
+    }
   }
 }
 
+// Mark notifications as read
+export async function POST(request: NextRequest) {
+  const prisma = createPrismaClient()
+
+  try {
+    const session = await getServerSession(authOptions) as Session | null
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { notificationIds } = body
+
+    if (!notificationIds || !Array.isArray(notificationIds)) {
+      return NextResponse.json(
+        { error: 'notificationIds array is required' },
+        { status: 400 }
+      )
+    }
+
+    // In a real system, you'd update a read status in a notifications table
+    // For now, we'll just return success since we're using TracerUpdate directly
+    // This endpoint exists for future implementation with a proper notifications table
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Notifications marked as read',
+      markedCount: notificationIds.length,
+    })
+  } catch (error) {
+    console.error('Error marking notifications as read:', error)
+    return NextResponse.json(
+      { error: 'Failed to mark notifications as read' },
+      { status: 500 }
+    )
+  } finally {
+    try {
+      await prisma.$disconnect()
+    } catch (disconnectError) {
+      console.warn('Error disconnecting Prisma client:', disconnectError)
+    }
+  }
+}

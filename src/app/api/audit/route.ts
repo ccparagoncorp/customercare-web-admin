@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     const knowledgeId = searchParams.get('knowledgeId')
     const sopId = searchParams.get('sopId')
     const qualityTrainingId = searchParams.get('qualityTrainingId')
+    const includeRelated = searchParams.get('includeRelated') === 'true'
     const limit = parseInt(searchParams.get('limit') || '100')
 
     const prisma = createPrismaClient()
@@ -47,8 +48,22 @@ export async function GET(request: NextRequest) {
     try {
       let logs
 
-      // If any related ID is provided, use the filter method
-      if (brandId || categoryId || subcategoryId || knowledgeId || sopId || qualityTrainingId) {
+      // Use getLogsWithRelatedChanges if includeRelated is true, otherwise use regular methods
+      if (includeRelated) {
+        // Use getLogsWithRelatedChanges to include related table changes
+        logs = await withRetry(() => auditService.getLogsWithRelatedChanges({
+          brandId: brandId || undefined,
+          categoryId: categoryId || undefined,
+          subcategoryId: subcategoryId || undefined,
+          knowledgeId: knowledgeId || undefined,
+          sopId: sopId || undefined,
+          qualityTrainingId: qualityTrainingId || undefined,
+          sourceTable: table || undefined,
+          actionType: action || undefined,
+          includeRelated: true,
+        }, limit))
+      } else if (brandId || categoryId || subcategoryId || knowledgeId || sopId || qualityTrainingId) {
+        // If any related ID is provided, use the filter method
         logs = await withRetry(() => auditService.getLogsWithFilters({
           brandId: brandId || undefined,
           categoryId: categoryId || undefined,
@@ -63,8 +78,20 @@ export async function GET(request: NextRequest) {
         // Get logs for specific record
         logs = await withRetry(() => auditService.getLogsByRecord(table, recordId))
       } else if (table) {
-        // Get logs for table
-        logs = await withRetry(() => auditService.getLogsByTable(table, limit))
+        // Get logs for table - use related changes if table supports it
+        const tablesWithRelations = ['detail_produks', 'produks', 'subkategori_produks', 'kategori_produks', 
+          'detail_sops', 'jenis_sops', 'sops', 'produk_jenis_detail_knowledges', 'jenis_detail_knowledges', 
+          'detail_knowledges', 'subdetail_quality_trainings', 'detail_quality_trainings', 'jenis_quality_trainings']
+        
+        if (tablesWithRelations.includes(table) && includeRelated) {
+          logs = await withRetry(() => auditService.getLogsWithRelatedChanges({
+            sourceTable: table,
+            actionType: action || undefined,
+            includeRelated: true,
+          }, limit))
+        } else {
+          logs = await withRetry(() => auditService.getLogsByTable(table, limit))
+        }
       } else if (action) {
         // Get logs by action type
         logs = await withRetry(() => auditService.getLogsByAction(action, limit))
