@@ -240,17 +240,10 @@ export function NotificationBell({ onNotificationsRead }: NotificationBellProps)
     }
   }
 
-  // Helper function to slugify text for URL
-  const slugify = (text: string | null): string => {
-    if (!text) return ''
-    return text.toLowerCase().trim().replace(/\s+/g, '-')
-  }
-
   // Get notification link based on source table (for admin routes)
   const getNotificationLink = (notification: Notification): string => {
     const sourceTable = notification.sourceTable
     const recordName = notification.recordName
-    const parentInfo = notification.parentInfo
 
     // For admin, we'll link to tracking pages or edit pages
     // If we don't have record name, return general page for the module

@@ -1,4 +1,4 @@
-import { PrismaClient, TracerUpdate } from '@prisma/client'
+import { PrismaClient, TracerUpdate, Prisma } from '@prisma/client'
 
 /**
  * Enriched audit log with user name
@@ -497,7 +497,7 @@ export class AuditLogService {
     const relatedTables = sourceTable ? tableRelations[sourceTable] || [] : []
 
     // Build query conditions for related tables
-    const whereConditions: any[] = []
+    const whereConditions: Prisma.TracerUpdateWhereInput[] = []
 
     // Product-related tables
     if (relatedTables.includes('produks')) {
@@ -623,7 +623,7 @@ export class AuditLogService {
 
     // Fetch related logs
     if (whereConditions.length > 0) {
-      const baseWhere: any = {
+      const baseWhere: Prisma.TracerUpdateWhereInput = {
         OR: whereConditions,
         ...(filters.actionType && { actionType: filters.actionType }),
         ...(filters.changedBy && { changedBy: filters.changedBy }),

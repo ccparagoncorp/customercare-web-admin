@@ -295,7 +295,6 @@ export async function GET(request: NextRequest) {
             }
             case 'sops': {
               // Prisma generates SOP model as sOP
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const sop = await prismaClient.sOP.findUnique({
                 where: { id: sourceKeyStr },
                 select: { 
