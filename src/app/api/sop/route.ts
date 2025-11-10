@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-    const sop = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.sOP.create({
+    const sop = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.sOP.create({
         data: {
           name,
           description,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
           kategoriSOP: true,
           jenisSOPs: true
         }
-      }))
+      })
     })
 
     return NextResponse.json(sop, { status: 201 })

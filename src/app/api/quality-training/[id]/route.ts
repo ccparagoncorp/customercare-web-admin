@@ -62,11 +62,11 @@ export async function PUT(
     const { title, description, logos = [], updatedBy, updateNotes } = body
     if (!title) return NextResponse.json({ error: 'Title is required' }, { status: 400 })
     const prisma = createPrismaClient()
-    const updated = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.qualityTraining.update({
+    const updated = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.qualityTraining.update({
         where: { id },
         data: { title, description, logos, updatedBy, updateNotes }
-      }))
+      })
     })
     return NextResponse.json(updated)
   } catch (error) {
@@ -91,8 +91,8 @@ export async function DELETE(
     }
     const { id } = await params
     const prisma = createPrismaClient()
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.qualityTraining.delete({ where: { id } }))
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.qualityTraining.delete({ where: { id } })
     })
     return NextResponse.json({ message: 'Deleted' })
   } catch (error) {

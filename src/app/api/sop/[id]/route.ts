@@ -83,8 +83,8 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
-    const sop = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.sOP.update({
+    const sop = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.sOP.update({
         where: { id },
         data: {
           name,
@@ -95,7 +95,7 @@ export async function PUT(
           kategoriSOP: true,
           jenisSOPs: true
         }
-      }))
+      })
     })
 
     return NextResponse.json(sop)
@@ -123,10 +123,10 @@ export async function DELETE(
     const { id } = await params
 
     const prisma = createPrismaClient()
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.sOP.delete({
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.sOP.delete({
         where: { id }
-      }))
+      })
     })
 
     return NextResponse.json({ message: 'SOP deleted successfully' })

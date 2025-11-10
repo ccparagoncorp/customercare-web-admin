@@ -63,11 +63,11 @@ export async function PUT(
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     if (!jenisQualityTrainingId) return NextResponse.json({ error: 'Jenis is required' }, { status: 400 })
     const prisma = createPrismaClient()
-    const updated = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.detailQualityTraining.update({
+    const updated = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.detailQualityTraining.update({
         where: { id },
         data: { name, description, logos, jenisQualityTrainingId }
-      }))
+      })
     })
     return NextResponse.json(updated)
   } catch (error) {
@@ -92,8 +92,8 @@ export async function DELETE(
     }
     const { id } = await params
     const prisma = createPrismaClient()
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.detailQualityTraining.delete({ where: { id } }))
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.detailQualityTraining.delete({ where: { id } })
     })
     return NextResponse.json({ message: 'Deleted' })
   } catch (error) {

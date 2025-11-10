@@ -109,8 +109,8 @@ export async function PUT(
         return NextResponse.json({ error: 'Brand is required for category' }, { status: 400 })
       }
 
-      const category = await withAuditUser(prisma, user.id, async () => {
-        return await withRetry(() => prisma.kategoriProduk.update({
+      const category = await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.kategoriProduk.update({
           where: { id },
           data: {
             name,
@@ -120,7 +120,7 @@ export async function PUT(
             updatedBy,
             updateNotes
           }
-        }))
+        })
       })
 
       return NextResponse.json(category)
@@ -129,8 +129,8 @@ export async function PUT(
         return NextResponse.json({ error: 'Parent category is required for subcategory' }, { status: 400 })
       }
 
-      const subcategory = await withAuditUser(prisma, user.id, async () => {
-        return await withRetry(() => prisma.subkategoriProduk.update({
+      const subcategory = await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.subkategoriProduk.update({
           where: { id },
           data: {
             name,
@@ -140,7 +140,7 @@ export async function PUT(
             updatedBy,
             updateNotes
           }
-        }))
+        })
       })
 
       return NextResponse.json(subcategory)
@@ -200,10 +200,10 @@ export async function DELETE(
         }
       }
 
-      await withAuditUser(prisma, user.id, async () => {
-        return await withRetry(() => prisma.kategoriProduk.delete({
+      await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.kategoriProduk.delete({
           where: { id }
-        }))
+        })
       })
     } else if (type === 'subcategory') {
       // Check if subcategory has associated products
@@ -232,10 +232,10 @@ export async function DELETE(
         }
       }
 
-      await withAuditUser(prisma, user.id, async () => {
-        return await withRetry(() => prisma.subkategoriProduk.delete({
+      await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.subkategoriProduk.delete({
           where: { id }
-        }))
+        })
       })
     }
 

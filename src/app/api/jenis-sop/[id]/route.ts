@@ -96,9 +96,9 @@ export async function PUT(
     const prisma = createPrismaClient()
     
     // Update Jenis SOP with audit tracking
-    await withAuditUser(prisma, user.id, async () => {
+    await withAuditUser(prisma, user.id, async (tx) => {
       // Update Jenis SOP
-      await withRetry(() => prisma.jenisSOP.update({
+      await tx.jenisSOP.update({
         where: { id },
         data: {
           name,
@@ -108,23 +108,23 @@ export async function PUT(
           updatedBy,
           updateNotes
         }
-      }))
+      })
 
       // Update details
       if (details.length > 0) {
         // Delete existing details
-        await withRetry(() => prisma.detailSOP.deleteMany({
+        await tx.detailSOP.deleteMany({
           where: { jenisSOPId: id }
-        }))
+        })
 
         // Create new details
-        await withRetry(() => prisma.detailSOP.createMany({
+        await tx.detailSOP.createMany({
           data: (details as DetailInput[]).map((detail: DetailInput) => ({
             name: detail.name,
             value: detail.value,
             jenisSOPId: id
           }))
-        }))
+        })
       }
     })
 
@@ -165,10 +165,10 @@ export async function DELETE(
     const { id } = await params
 
     const prisma = createPrismaClient()
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.jenisSOP.delete({
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.jenisSOP.delete({
         where: { id }
-      }))
+      })
     })
 
     return NextResponse.json({ message: 'Jenis SOP deleted successfully' })

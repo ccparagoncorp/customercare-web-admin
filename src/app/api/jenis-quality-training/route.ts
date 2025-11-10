@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     if (!qualityTrainingId) return NextResponse.json({ error: 'QualityTraining is required' }, { status: 400 })
     const prisma = createPrismaClient()
-    const created = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.jenisQualityTraining.create({
+    const created = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.jenisQualityTraining.create({
         data: {
           name,
           description,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           }
         },
         include: { qualityTraining: true, detailQualityTrainings: { include: { subdetailQualityTrainings: true } } }
-      }))
+      })
     })
     return NextResponse.json(created, { status: 201 })
   } catch (error) {

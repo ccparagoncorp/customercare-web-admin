@@ -325,10 +325,8 @@ export async function POST(request: NextRequest) {
 
     // Create knowledge with details using per-request Prisma client
     const prisma = createPrismaClient()
-    const newKnowledge = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(async () => {
-        try {
-          return await prisma.knowledge.create({
+    const newKnowledge = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.knowledge.create({
             data: {
               title: title.trim(),
               description: description,
@@ -391,10 +389,6 @@ export async function POST(request: NextRequest) {
               }
             }
           })
-        } catch (error) {
-          throw error
-        }
-      })
     })
 
     return NextResponse.json(
@@ -510,14 +504,8 @@ export async function DELETE(request: NextRequest) {
 
     // Delete knowledge (cascades detailKnowledges via relation)
     const prisma = createPrismaClient()
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(async () => {
-        try {
-          return await prisma.knowledge.delete({ where: { id: knowledgeId } })
-        } catch (error) {
-          throw error
-        }
-      })
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.knowledge.delete({ where: { id: knowledgeId } })
     })
 
     return NextResponse.json(
@@ -849,11 +837,9 @@ export async function PUT(request: NextRequest) {
       }
       // Clear existing details and update knowledge using per-request Prisma client
       const prisma = createPrismaClient()
-      await withAuditUser(prisma, user.id, async () => {
-        return await withRetry(async () => {
-          try {
-            await prisma.detailKnowledge.deleteMany({ where: { knowledgeId: id } })
-            return await prisma.knowledge.update({
+      await withAuditUser(prisma, user.id, async (tx) => {
+        await tx.detailKnowledge.deleteMany({ where: { knowledgeId: id } })
+        return await tx.knowledge.update({
               where: { id },
               data: {
                 ...(title ? { title: title.trim() } : {}),
@@ -884,17 +870,11 @@ export async function PUT(request: NextRequest) {
                 }
               }
             })
-          } catch (error) {
-            throw error
-          }
-        })
       })
     } else {
       const prisma = createPrismaClient()
-      await withAuditUser(prisma, user.id, async () => {
-        return await withRetry(async () => {
-          try {
-            return await prisma.knowledge.update({
+      await withAuditUser(prisma, user.id, async (tx) => {
+        return await tx.knowledge.update({
               where: { id },
               data: {
                 ...(title ? { title: title.trim() } : {}),
@@ -904,10 +884,6 @@ export async function PUT(request: NextRequest) {
                 ...(updateNotes ? { updateNotes: updateNotes.trim() } : {})
               }
             })
-          } catch (error) {
-            throw error
-          }
-        })
       })
     }
 

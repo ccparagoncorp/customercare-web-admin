@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user with audit tracking
-    const newUser = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.user.create({
+    const newUser = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.user.create({
         data: {
           email,
           name,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
           isActive: true,
           createdAt: true
         }
-      }))
+      })
     })
 
     return NextResponse.json(newUser, { status: 201 })

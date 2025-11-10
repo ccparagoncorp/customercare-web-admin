@@ -89,20 +89,20 @@ export async function PUT(
     const prisma = createPrismaClient()
     
     // Replace strategy: update main fields, purge details, recreate nested with audit tracking
-    await withAuditUser(prisma, user.id, async () => {
+    await withAuditUser(prisma, user.id, async (tx) => {
       // Replace strategy: update main fields, purge details, recreate nested
-      await withRetry(() => prisma.jenisQualityTraining.update({
+      await tx.jenisQualityTraining.update({
         where: { id },
         data: { name, description, logos, qualityTrainingId, updatedBy, updateNotes }
-      }))
+      })
 
       // Delete existing details (cascades subdetails)
-      await withRetry(() => prisma.detailQualityTraining.deleteMany({ where: { jenisQualityTrainingId: id } }))
+      await tx.detailQualityTraining.deleteMany({ where: { jenisQualityTrainingId: id } })
 
       // Recreate details + subdetails if provided
       if (details && details.length > 0) {
         for (const d of details as DetailInput[]) {
-          const createdDetail = await withRetry(() => prisma.detailQualityTraining.create({
+          const createdDetail = await tx.detailQualityTraining.create({
             data: {
               name: d.name,
               description: d.description,
@@ -112,10 +112,10 @@ export async function PUT(
               logos: d.logos || [],
               jenisQualityTrainingId: id
             }
-          }))
+          })
           if (d.subdetails && d.subdetails.length > 0) {
             const subdetailsArray = d.subdetails as SubdetailInput[]
-            await withRetry(() => prisma.subdetailQualityTraining.createMany({
+            await tx.subdetailQualityTraining.createMany({
               data: subdetailsArray.map((s: SubdetailInput) => ({
                 name: s.name,
                 description: s.description,
@@ -124,7 +124,7 @@ export async function PUT(
                 logos: s.logos || [],
                 detailQualityTrainingId: createdDetail.id
               }))
-            }))
+            })
           }
         }
       }
@@ -160,8 +160,8 @@ export async function DELETE(
     }
     const { id } = await params
     const prisma = createPrismaClient()
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.jenisQualityTraining.delete({ where: { id } }))
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.jenisQualityTraining.delete({ where: { id } })
     })
     return NextResponse.json({ message: 'Deleted' })
   } catch (error) {

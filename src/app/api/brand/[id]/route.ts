@@ -80,8 +80,8 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
-    const brand = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.brand.update({
+    const brand = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.brand.update({
         where: { id },
         data: {
           name,
@@ -92,7 +92,7 @@ export async function PUT(
           updatedBy: user.email || 'system',
           updateNotes
         }
-      }))
+      })
     })
 
     return NextResponse.json(brand)
@@ -150,10 +150,10 @@ export async function DELETE(
       }
     }
 
-    await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.brand.delete({
+    await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.brand.delete({
         where: { id }
-      }))
+      })
     })
 
     return NextResponse.json({ message: 'Brand deleted successfully' })

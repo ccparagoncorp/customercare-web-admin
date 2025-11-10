@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-    const created = await withAuditUser(prisma, user.id, async () => {
-      return await withRetry(() => prisma.qualityTraining.create({
+    const created = await withAuditUser(prisma, user.id, async (tx) => {
+      return await tx.qualityTraining.create({
         data: {
           title,
           description,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         include: {
           jenisQualityTrainings: true
         }
-      }))
+      })
     })
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
