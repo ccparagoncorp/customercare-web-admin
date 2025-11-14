@@ -355,11 +355,30 @@ function ProductManagementContent() {
           <div className="border-b border-gray-100">
             <nav className="flex space-x-8 px-6">
               {[
-                { id: 'brand', label: sections.brand.title, icon: Tag },
-                { id: 'category', label: sections.category.title, icon: Layers },
-                { id: 'product', label: sections.product.title, icon: Package }
+                { 
+                  id: 'brand', 
+                  label: sections.brand.title, 
+                  icon: Tag,
+                  count: filteredBrands.length,
+                  total: brands.length
+                },
+                { 
+                  id: 'category', 
+                  label: sections.category.title, 
+                  icon: Layers,
+                  count: filteredCategories.length + filteredSubcategories.length,
+                  total: categories.length + subcategories.length
+                },
+                { 
+                  id: 'product', 
+                  label: sections.product.title, 
+                  icon: Package,
+                  count: filteredProducts.length,
+                  total: products.length
+                }
               ].map((tab) => {
                 const Icon = tab.icon
+                const showCount = tab.count !== tab.total || tab.count > 0
                 return (
                   <button
                     key={tab.id}
@@ -372,6 +391,15 @@ function ProductManagementContent() {
                   >
                     <Icon className="h-5 w-5" />
                     <span>{tab.label}</span>
+                    {showCount && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        activeTab === tab.id
+                          ? 'bg-[#03438f]/10 text-[#03438f]'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -384,7 +412,12 @@ function ProductManagementContent() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{sections.brand.title}</h2>
+                    <div className="flex items-center space-x-3">
+                      <h2 className="text-xl font-semibold text-gray-900">{sections.brand.title}</h2>
+                      <span className="px-2.5 py-1 rounded-full text-sm font-semibold bg-[#03438f]/10 text-[#03438f]">
+                        {filteredBrands.length} {filteredBrands.length !== brands.length ? `dari ${brands.length}` : ''}
+                      </span>
+                    </div>
                     <p className="text-gray-600">{sections.brand.description}</p>
                   </div>
                   <button
@@ -567,7 +600,12 @@ function ProductManagementContent() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{sections.category.title}</h2>
+                    <div className="flex items-center space-x-3">
+                      <h2 className="text-xl font-semibold text-gray-900">{sections.category.title}</h2>
+                      <span className="px-2.5 py-1 rounded-full text-sm font-semibold bg-[#03438f]/10 text-[#03438f]">
+                        {filteredCategories.length + filteredSubcategories.length} {(filteredCategories.length + filteredSubcategories.length) !== (categories.length + subcategories.length) ? `dari ${categories.length + subcategories.length}` : ''}
+                      </span>
+                    </div>
                     <p className="text-gray-600">{sections.category.description}</p>
                   </div>
                   <button
@@ -625,7 +663,12 @@ function ProductManagementContent() {
                     {/* Categories */}
                     <div>
                       <div className="flex items-end justify-between mb-4 gap-4 flex-col md:flex-row">
-                        <h3 className="text-lg font-medium text-gray-900">Kategori Utama</h3>
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-lg font-medium text-gray-900">Kategori Utama</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                            {filteredCategories.length}
+                          </span>
+                        </div>
                         <div className="w-full md:w-64">
                           <label className="block text-sm font-medium text-gray-700 mb-1">Filter Brand</label>
                           <select
@@ -758,7 +801,12 @@ function ProductManagementContent() {
                     {/* Subcategories */}
                     <div>
                       <div className="flex items-end justify-between mb-4 gap-4 flex-col md:flex-row">
-                        <h3 className="text-lg font-medium text-gray-900">Subkategori</h3>
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-lg font-medium text-gray-900">Subkategori</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                            {filteredSubcategories.length}
+                          </span>
+                        </div>
                         <div className="w-full md:w-64">
                           <label className="block text-sm font-medium text-gray-700 mb-1">Filter Brand</label>
                           <select
@@ -903,7 +951,12 @@ function ProductManagementContent() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{sections.product.title}</h2>
+                    <div className="flex items-center space-x-3">
+                      <h2 className="text-xl font-semibold text-gray-900">{sections.product.title}</h2>
+                      <span className="px-2.5 py-1 rounded-full text-sm font-semibold bg-[#03438f]/10 text-[#03438f]">
+                        {filteredProducts.length} {filteredProducts.length !== products.length ? `dari ${products.length}` : ''}
+                      </span>
+                    </div>
                     <p className="text-gray-600">{sections.product.description}</p>
                   </div>
                   <button
