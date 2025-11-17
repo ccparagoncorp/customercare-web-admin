@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -58,7 +59,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { id } = await params
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      description?: string | null
+      logos?: string[]
+      jenisQualityTrainingId?: string
+    }
     const { name, description, logos = [], jenisQualityTrainingId } = body
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     if (!jenisQualityTrainingId) return NextResponse.json({ error: 'Jenis is required' }, { status: 400 })

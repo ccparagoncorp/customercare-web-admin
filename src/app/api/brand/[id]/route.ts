@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -72,7 +73,14 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      description?: string | null
+      images?: string[]
+      link_sampul?: string | null
+      colorbase?: string | null
+      updateNotes?: string | null
+    }
     const { name, description, images = [], link_sampul, colorbase, updateNotes } = body
 
     if (!name) {

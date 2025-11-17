@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -66,7 +67,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const { email, name, role } = await request.json()
+    const { email, name, role } = normalizeEmptyStrings(await request.json()) as {
+      email?: string
+      name?: string
+      role?: string
+    }
 
     if (!email || !name || !role) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 })

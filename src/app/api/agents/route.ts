@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createClient } from '@supabase/supabase-js'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 import bcrypt from 'bcryptjs'
 
 interface SessionUser {
@@ -56,7 +57,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      email?: string
+      password?: string
+      category?: string
+    }
     const { name, email, password, category = 'socialMedia' } = body
 
     // Validate required fields

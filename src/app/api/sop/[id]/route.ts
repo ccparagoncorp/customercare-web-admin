@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -72,8 +73,12 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
-    const { name, description, kategoriSOPId, link } = body
+    const { name, description, kategoriSOPId, link } = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      description?: string | null
+      kategoriSOPId?: string
+      link?: string | null
+    }
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -83,20 +88,13 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
-
-    const normalizedLink =
-      typeof link === 'string'
-        ? (link.trim() === '' ? null : link.trim())
-        : link === undefined
-          ? undefined
-          : null
     const sop = await withAuditUser(prisma, user.id, async (tx) => {
       return await tx.sOP.update({
         where: { id },
         data: {
           name,
           description,
-          link: normalizedLink,
+          link,
           kategoriSOPId
         },
         include: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -31,7 +32,11 @@ export async function POST(
     }
 
     const { id } = await params
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      detail?: string
+      images?: string[]
+    }
     const { name, detail, images = [] } = body
 
     if (!name || !detail) {

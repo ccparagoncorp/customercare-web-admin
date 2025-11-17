@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -77,7 +78,16 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      content?: string | null
+      images?: string[]
+      sopId?: string
+      details?: DetailInput[]
+      updatedBy?: string
+      updateNotes?: string
+      link?: string | null
+    }
     const { name, content, images = [], sopId, details = [], updatedBy, updateNotes, link } = body
 
     if (!name) {
@@ -94,13 +104,6 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
-
-    const normalizedLink =
-      typeof link === 'string'
-        ? (link.trim() === '' ? null : link.trim())
-        : link === undefined
-          ? undefined
-          : null
     
     // Update Jenis SOP with audit tracking
     await withAuditUser(prisma, user.id, async (tx) => {
@@ -110,7 +113,7 @@ export async function PUT(
         data: {
           name,
           content,
-          link: normalizedLink,
+          link,
           images,
           sopId,
           updatedBy,

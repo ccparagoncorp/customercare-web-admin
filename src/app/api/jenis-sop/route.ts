@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -66,7 +67,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      content?: string | null
+      images?: string[]
+      sopId?: string
+      details?: DetailInput[]
+      link?: string | null
+    }
     const { name, content, images = [], sopId, details = [], link } = body
 
     if (!name) {
@@ -77,17 +85,12 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
-
-    const normalizedLink =
-      typeof link === 'string'
-        ? (link.trim() === '' ? null : link.trim())
-        : null
     const jenisSOP = await withAuditUser(prisma, user.id, async (tx) => {
       return await tx.jenisSOP.create({
         data: {
           name,
           content,
-          link: normalizedLink,
+          link,
           images,
           sopId,
           createdBy: user.email || 'system',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -71,8 +72,10 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
-    const { name, description } = body
+    const { name, description } = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      description?: string | null
+    }
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })

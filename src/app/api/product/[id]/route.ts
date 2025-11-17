@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
 import { Prisma, ProductStatus } from '@prisma/client'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -121,7 +122,7 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json() as ProductUpdateBody & { brandId?: string }
+    const body = normalizeEmptyStrings(await request.json()) as ProductUpdateBody & { brandId?: string | null }
     const { 
       name, 
       description, 

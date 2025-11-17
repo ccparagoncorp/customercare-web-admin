@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 import { deleteProductFileServer } from '@/lib/supabase-storage'
 
 interface SessionUser {
@@ -87,7 +88,16 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      description?: string | null
+      images?: string[]
+      type?: 'category' | 'subcategory'
+      brandId?: string
+      parentCategoryId?: string
+      updateNotes?: string | null
+      updatedBy?: string
+    }
     const { name, description, images = [], type = 'category', brandId, parentCategoryId, updateNotes, updatedBy } = body
 
     if (!name) {
@@ -169,7 +179,9 @@ export async function DELETE(
     }
 
     const { id } = await params
-    const { type = 'category' } = await request.json()
+    const { type = 'category' } = normalizeEmptyStrings(await request.json()) as {
+      type?: 'category' | 'subcategory'
+    }
 
     const prisma = createPrismaClient()
     

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient } from '@/lib/prisma'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -425,8 +426,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { notificationIds } = body
+    const { notificationIds } = normalizeEmptyStrings(await request.json()) as {
+      notificationIds?: unknown
+    }
 
     if (!notificationIds || !Array.isArray(notificationIds)) {
       return NextResponse.json(

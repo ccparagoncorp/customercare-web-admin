@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { Prisma } from '@prisma/client'
+import { Prisma, UserRole } from '@prisma/client'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -76,7 +77,13 @@ export async function PUT(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const { email, name, password, role, isActive } = await request.json()
+    const { email, name, password, role, isActive } = normalizeEmptyStrings(await request.json()) as {
+      email?: string
+      name?: string
+      password?: string
+      role?: string
+      isActive?: boolean
+    }
 
     const prisma = createPrismaClient()
     
@@ -104,7 +111,7 @@ export async function PUT(
     const updateData: Prisma.UserUpdateInput & { password?: string } = {}
     if (email) updateData.email = email
     if (name) updateData.name = name
-    if (role) updateData.role = role
+    if (role) updateData.role = role as UserRole
     if (typeof isActive === 'boolean') updateData.isActive = isActive
     if (password) {
       updateData.password = await bcrypt.hash(password, 12)

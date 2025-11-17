@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
 import { Prisma, ProductStatus } from '@prisma/client'
+import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
   id: string
@@ -135,7 +136,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    const body = normalizeEmptyStrings(await request.json()) as {
+      name?: string
+      description?: string | null
+      kapasitas?: string | null
+      status?: string
+      images?: string[]
+      subcategoryId?: string
+      details?: DetailInput[]
+      harga?: number
+      categoryId?: string
+      brandId?: string
+    }
     const { 
       name, 
       description, 
