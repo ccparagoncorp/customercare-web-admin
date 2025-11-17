@@ -94,6 +94,13 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
+
+    const normalizedLink =
+      typeof link === 'string'
+        ? (link.trim() === '' ? null : link.trim())
+        : link === undefined
+          ? undefined
+          : null
     
     // Update Jenis SOP with audit tracking
     await withAuditUser(prisma, user.id, async (tx) => {
@@ -103,6 +110,7 @@ export async function PUT(
         data: {
           name,
           content,
+          link: normalizedLink,
           link: link || undefined,
           images,
           sopId,

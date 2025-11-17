@@ -77,12 +77,17 @@ export async function POST(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
+
+    const normalizedLink =
+      typeof link === 'string'
+        ? (link.trim() === '' ? null : link.trim())
+        : null
     const jenisSOP = await withAuditUser(prisma, user.id, async (tx) => {
       return await tx.jenisSOP.create({
         data: {
           name,
           content,
-          link: link || undefined,
+          link: normalizedLink,
           images,
           sopId,
           createdBy: user.email || 'system',

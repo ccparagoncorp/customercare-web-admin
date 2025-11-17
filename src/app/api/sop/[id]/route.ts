@@ -83,13 +83,20 @@ export async function PUT(
     }
 
     const prisma = createPrismaClient()
+
+    const normalizedLink =
+      typeof link === 'string'
+        ? (link.trim() === '' ? null : link.trim())
+        : link === undefined
+          ? undefined
+          : null
     const sop = await withAuditUser(prisma, user.id, async (tx) => {
       return await tx.sOP.update({
         where: { id },
         data: {
           name,
           description,
-          link: link || undefined,
+          link: normalizedLink,
           kategoriSOPId
         },
         include: {
