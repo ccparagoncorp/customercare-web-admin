@@ -27,6 +27,7 @@ interface SOP {
   id: string
   name: string
   description?: string
+  link?: string
   kategoriSOPId: string
 }
 
@@ -39,6 +40,7 @@ export default function EditNamaSOP({ params }: { params: Promise<{ id: string }
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    link: '',
     kategoriSOPId: ''
   })
 
@@ -57,6 +59,7 @@ export default function EditNamaSOP({ params }: { params: Promise<{ id: string }
         setFormData({
           name: data.name,
           description: data.description || '',
+          link: data.link || '',
           kategoriSOPId: data.kategoriSOPId
         })
       }
@@ -175,6 +178,17 @@ export default function EditNamaSOP({ params }: { params: Promise<{ id: string }
                 placeholder="Masukkan deskripsi SOP"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
                 rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="link">Link SOP</Label>
+              <Input
+                id="link"
+                type="url"
+                value={formData.link}
+                onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
+                placeholder="https://contoh-link-sop.com"
               />
             </div>
 

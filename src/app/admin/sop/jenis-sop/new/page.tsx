@@ -45,6 +45,7 @@ export default function NewJenisSOP() {
   const [formData, setFormData] = useState({
     name: '',
     content: '',
+    link: '',
     images: [] as string[],
     sopId: '',
     details: [] as DetailSOP[]
@@ -296,6 +297,17 @@ export default function NewJenisSOP() {
                   placeholder="Masukkan konten jenis SOP"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#03438f] focus:border-transparent"
                   rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="link">Link Jenis SOP</Label>
+                <Input
+                  id="link"
+                  type="url"
+                  value={formData.link}
+                  onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
+                  placeholder="https://contoh-link-jenis-sop.com"
                 />
               </div>
             </div>

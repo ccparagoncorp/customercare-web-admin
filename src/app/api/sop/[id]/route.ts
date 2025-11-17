@@ -73,7 +73,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, description, kategoriSOPId } = body
+    const { name, description, kategoriSOPId, link } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -89,6 +89,7 @@ export async function PUT(
         data: {
           name,
           description,
+          link: link || undefined,
           kategoriSOPId
         },
         include: {

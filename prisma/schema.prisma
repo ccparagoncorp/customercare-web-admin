@@ -120,6 +120,7 @@ model SOP {
   id            String      @id @default(cuid())
   name          String
   description   String?
+  link          String?
   kategoriSOPId String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -134,6 +135,7 @@ model JenisSOP {
   name       String
   content    String?
   images     String[]
+  link       String?
   sopId      String
   createdBy  String?
   updatedBy  String?

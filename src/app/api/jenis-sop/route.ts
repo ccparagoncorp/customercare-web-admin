@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, content, images = [], sopId, details = [] } = body
+    const { name, content, images = [], sopId, details = [], link } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           content,
+          link: link || undefined,
           images,
           sopId,
           createdBy: user.email || 'system',
