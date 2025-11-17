@@ -111,7 +111,6 @@ export async function PUT(
           name,
           content,
           link: normalizedLink,
-          link: link || undefined,
           images,
           sopId,
           updatedBy,
