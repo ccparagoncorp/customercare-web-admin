@@ -156,7 +156,7 @@ export async function PUT(
     // IMPORTANT: Gunakan tx (transaction client) untuk semua operasi database
     await withAuditUser(prisma, user.id, async (tx) => {
       // Normalize IDs: convert empty string or '-' to null
-      const normalizeId = (id: string | undefined): string | null => {
+      const normalizeId = (id: string | null | undefined): string | null => {
         if (!id || id.trim() === '' || id === '-') {
           return null
         }
