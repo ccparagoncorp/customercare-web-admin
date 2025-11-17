@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
 import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 
 interface SessionUser {
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
         data: {
           email,
           name,
-          role,
+          role: role as UserRole,
           isActive: true
         },
         select: {
