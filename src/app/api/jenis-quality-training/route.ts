@@ -92,23 +92,27 @@ export async function POST(request: NextRequest) {
           updatedBy,
           updateNotes,
           detailQualityTrainings: {
-            create: (details as DetailInput[]).map((d: DetailInput) => ({
-              name: d.name,
-              description: d.description,
-              linkslide: d.linkslide,
-              updatedBy: d.updatedBy,
-              updateNotes: d.updateNotes,
-              logos: d.logos || [],
-              subdetailQualityTrainings: {
-                create: (d.subdetails || []).map((s: SubdetailInput) => ({
-                  name: s.name,
-                  description: s.description,
-                  updatedBy: s.updatedBy,
-                  updateNotes: s.updateNotes,
-                  logos: s.logos || []
-                }))
-              }
-            }))
+            create: (details as DetailInput[])
+              .filter((d: DetailInput) => d.name && d.name.trim() !== '')
+              .map((d: DetailInput) => ({
+                name: d.name,
+                description: d.description,
+                linkslide: d.linkslide,
+                updatedBy: d.updatedBy,
+                updateNotes: d.updateNotes,
+                logos: d.logos || [],
+                subdetailQualityTrainings: {
+                  create: (d.subdetails || [])
+                    .filter((s: SubdetailInput) => s.name && s.name.trim() !== '')
+                    .map((s: SubdetailInput) => ({
+                      name: s.name,
+                      description: s.description,
+                      updatedBy: s.updatedBy,
+                      updateNotes: s.updateNotes,
+                      logos: s.logos || []
+                    }))
+                }
+              }))
           }
         },
         include: { qualityTraining: true, detailQualityTrainings: { include: { subdetailQualityTrainings: true } } }

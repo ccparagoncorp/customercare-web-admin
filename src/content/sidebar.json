@@ -36,6 +36,13 @@
         "inactive": "/sidebar/quality&training.png"
       }
     },
+    "feedbackImprovement": {
+      "label": "Feedback Improvement",
+      "icon": {
+        "active": "/sidebar/improvementswhite.png",
+        "inactive": "/sidebar/improvements.png"
+      }
+    },
 
     "logout": {
       "label": "Keluar"

@@ -64,6 +64,12 @@ export function Sidebar() {
       href: "/admin/quality-training",
       icon: admin.manageQualityTraining.icon as IconPaths,
       active: pathname === "/admin/quality-training"
+    },
+    {
+      name: admin.feedbackImprovement.label,
+      href: "/admin/improvement",
+      icon: admin.feedbackImprovement.icon as IconPaths,
+      active: pathname === "/admin/improvement"
     }
   ]
 
