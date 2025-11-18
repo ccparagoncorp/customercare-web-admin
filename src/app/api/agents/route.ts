@@ -62,8 +62,19 @@ export async function POST(request: NextRequest) {
       email?: string
       password?: string
       category?: string
+      qaScore?: number
+      quizScore?: number
+      typingTestScore?: number
     }
-    const { name, email, password, category = 'socialMedia' } = body
+    const {
+      name,
+      email,
+      password,
+      category = 'socialMedia',
+      qaScore = 0,
+      quizScore = 0,
+      typingTestScore = 0
+    } = body
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -155,6 +166,15 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12)
 
     // Create agent profile in database
+    const parseScore = (value: unknown) => {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+
+    const parsedQaScore = parseScore(qaScore)
+    const parsedQuizScore = parseScore(quizScore)
+    const parsedTypingScore = parseScore(typingTestScore)
+
     const newAgent = await withRetry(() => prisma.agent.create({
       data: {
         id: authData.user.id, // Use Supabase Auth user ID
@@ -162,7 +182,10 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase().trim(),
         password: hashedPassword, // Store hashed password
         category: category,
-        isActive: true
+        isActive: true,
+        qaScore: parsedQaScore,
+        quizScore: parsedQuizScore,
+        typingTestScore: parsedTypingScore
       }
     }))
 
@@ -175,6 +198,9 @@ export async function POST(request: NextRequest) {
           name: newAgent.name,
           email: newAgent.email,
           category: newAgent.category,
+          qaScore: newAgent.qaScore,
+          quizScore: newAgent.quizScore,
+          typingTestScore: newAgent.typingTestScore,
           isActive: newAgent.isActive,
           createdAt: newAgent.createdAt
         }
@@ -247,6 +273,9 @@ export async function GET(request: NextRequest) {
           name: true,
           email: true,
           category: true,
+          qaScore: true,
+          quizScore: true,
+          typingTestScore: true,
           isActive: true,
           createdAt: true
         }
@@ -273,6 +302,116 @@ export async function GET(request: NextRequest) {
     )
   } finally {
     // Prisma client is automatically managed by createPrismaClient
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions) as Session | null
+
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const user = session.user
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { message: 'Forbidden: Admin access required' },
+        { status: 403 }
+      )
+    }
+
+    const body = normalizeEmptyStrings(await request.json()) as {
+      id?: string
+      qaScore?: number
+      quizScore?: number
+      typingTestScore?: number
+      category?: string
+      isActive?: boolean
+    }
+
+    const { id, qaScore, quizScore, typingTestScore, category, isActive } = body
+
+    if (!id) {
+      return NextResponse.json(
+        { message: 'Agent ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const prisma = createPrismaClient()
+    const existingAgent = await withRetry(() => prisma.agent.findUnique({ where: { id } }))
+
+    if (!existingAgent) {
+      return NextResponse.json(
+        { message: 'Agent not found' },
+        { status: 404 }
+      )
+    }
+
+    const parseScore = (value: unknown) => {
+      if (value === null || value === undefined) return undefined
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+
+    const updateData: {
+      qaScore?: number
+      quizScore?: number
+      typingTestScore?: number
+      category?: string
+      isActive?: boolean
+    } = {}
+
+    const parsedQa = parseScore(qaScore)
+    if (parsedQa !== undefined) updateData.qaScore = parsedQa
+
+    const parsedQuiz = parseScore(quizScore)
+    if (parsedQuiz !== undefined) updateData.quizScore = parsedQuiz
+
+    const parsedTyping = parseScore(typingTestScore)
+    if (parsedTyping !== undefined) updateData.typingTestScore = parsedTyping
+
+    if (category) updateData.category = category
+    if (typeof isActive === 'boolean') updateData.isActive = isActive
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { message: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
+
+    const updatedAgent = await withRetry(() => prisma.agent.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        category: true,
+        qaScore: true,
+        quizScore: true,
+        typingTestScore: true,
+        isActive: true,
+        createdAt: true
+      }
+    }))
+
+    return NextResponse.json({
+      message: 'Agent updated successfully',
+      agent: updatedAgent
+    })
+
+  } catch (error) {
+    console.error('Error updating agent:', error)
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 

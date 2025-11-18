@@ -11,8 +11,11 @@ interface Agent {
   id: string
   name: string
   email: string
-  role: string
+  role?: string
   category: string
+  qaScore?: number
+  quizScore?: number
+  typingTestScore?: number
   isActive?: boolean
   createdAt?: string
   updatedAt?: string

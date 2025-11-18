@@ -3,17 +3,23 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Trash2, Eye, X } from "lucide-react"
+import { Plus, Search, Trash2, Eye, X, Pencil } from "lucide-react"
 import { AddAgentModal } from "./AddAgentModal"
+import { EditAgentModal } from "./EditAgentModal"
 import agentsContent from "@/content/agents.json"
 
 interface Agent {
   id: string
   name: string
   email: string
+  role?: string
   category: string
-  isActive: boolean
+  qaScore?: number
+  quizScore?: number
+  typingTestScore?: number
+  isActive?: boolean
   createdAt?: string
+  updatedAt?: string
 }
 
 export function AgentsTable() {
@@ -22,6 +28,8 @@ export function AgentsTable() {
   const [searchTerm, setSearchTerm] = useState("")
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -99,6 +107,11 @@ export function AgentsTable() {
     setPagination(prev => ({ ...prev, page: 1 }))
   }
 
+  const handleEditClick = (agent: Agent) => {
+    setSelectedAgent(agent)
+    setShowEditModal(true)
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus agent ini?')) return
 
@@ -137,6 +150,15 @@ export function AgentsTable() {
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
         {config.label}
+      </span>
+    )
+  }
+
+  const renderScoreBadge = (value?: number) => {
+    const score = typeof value === 'number' ? value : 0
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#03438f]/10 text-[#03438f]">
+        {score.toFixed(0)}
       </span>
     )
   }
@@ -216,13 +238,22 @@ export function AgentsTable() {
                     {table.headers.email}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kategori
+                    {table.headers.category}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {table.headers.status}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {table.headers.qaScore}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {table.headers.quizScore}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {table.headers.typingScore}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aksi
+                    {table.headers.actions}
                   </th>
                 </tr>
               </thead>
@@ -260,16 +291,36 @@ export function AgentsTable() {
                       {agent.isActive ? 'Aktif' : 'Nonaktif'}
                     </span>
                   </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.qaScore)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.quizScore)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.typingTestScore)}
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(agent.id)}
-                      className="text-red-600 hover:text-red-900 hover:bg-red-50"
-                      disabled={loading}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditClick(agent)}
+                        className="text-[#03438f] hover:bg-[#03438f]/10"
+                        disabled={loading}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(agent.id)}
+                        className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                        disabled={loading}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -320,11 +371,32 @@ export function AgentsTable() {
             if (newAgent) {
               const agentWithDefaults: Agent = {
                 ...newAgent,
+                qaScore: newAgent.qaScore ?? 0,
+                quizScore: newAgent.quizScore ?? 0,
+                typingTestScore: newAgent.typingTestScore ?? 0,
                 isActive: newAgent.isActive ?? true
               }
               setAgents(prev => [agentWithDefaults, ...prev])
               setPagination(prev => ({ ...prev, total: prev.total + 1 }))
             }
+          }}
+        />
+      )}
+      {showEditModal && selectedAgent && (
+        <EditAgentModal
+          isOpen={showEditModal}
+          agent={selectedAgent}
+          onClose={() => {
+            setShowEditModal(false)
+            setSelectedAgent(null)
+          }}
+          onUpdated={(updatedAgent) => {
+            setAgents(prev => prev.map(agent => agent.id === updatedAgent.id ? {
+              ...agent,
+              qaScore: updatedAgent.qaScore,
+              quizScore: updatedAgent.quizScore,
+              typingTestScore: updatedAgent.typingTestScore
+            } : agent))
           }}
         />
       )}

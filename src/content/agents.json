@@ -7,6 +7,11 @@
     "headers": {
       "name": "Nama",
       "email": "Email",
+      "category": "Kategori",
+      "status": "Status",
+      "qaScore": "QA Score",
+      "quizScore": "Quiz Score",
+      "typingScore": "Typing Test",
       "actions": "Aksi"
     },
     "actions": {
@@ -23,6 +28,11 @@
     "totalAgents": "Total Agent",
     "totalSocMed": "Total SocMed",
     "totalECom": "Total E-Com"
+  },
+  "scoreStats": {
+    "qaAverage": "Rata-rata QA Score",
+    "quizAverage": "Rata-rata Quiz Score",
+    "typingAverage": "Rata-rata Typing Test"
   },
   "categories": {
     "socialMedia": "Social Media",

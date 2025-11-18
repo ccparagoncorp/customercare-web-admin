@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AdminLayout } from "@/components/admin/AdminLayout"
 import { AgentsTable } from "@/components/admin/agent/AgentsTable"
-import { Users, UserCheck, Clock } from "lucide-react"
+import { Users, UserCheck, Clock, Gauge, GraduationCap, Keyboard } from "lucide-react"
 import agentsContent from "@/content/agents.json"
 
 interface UserWithRole {
@@ -42,6 +42,23 @@ export default function AgentsPage() {
       changeType: "positive"
     }
   ])
+  const [scoreStats, setScoreStats] = useState([
+    {
+      title: agentsContent.scoreStats.qaAverage,
+      value: "0",
+      icon: Gauge
+    },
+    {
+      title: agentsContent.scoreStats.quizAverage,
+      value: "0",
+      icon: GraduationCap
+    },
+    {
+      title: agentsContent.scoreStats.typingAverage,
+      value: "0",
+      icon: Keyboard
+    }
+  ])
 
   useEffect(() => {
     if (status === 'loading') return
@@ -62,39 +79,55 @@ export default function AgentsPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/agents')
-        if (response.ok) {
-          const data = await response.json()
-          const agents = data.users || []
-          
-          const totalAgents = agents.length
-          const totalSocMed = agents.filter((agent: { category: string }) => agent.category === 'socialMedia').length
-          const totalECom = agents.filter((agent: { category: string }) => agent.category === 'eCommerce').length
-          
-          setStatsData([
-            {
-              title: agentsContent.stats.totalAgents,
-              value: totalAgents.toString(),
-              icon: Users,
-              change: "+0",
-              changeType: "positive"
-            },
-            {
-              title: agentsContent.stats.totalSocMed,
-              value: totalSocMed.toString(),
-              icon: UserCheck,
-              change: "+0",
-              changeType: "positive"
-            },
-            {
-              title: agentsContent.stats.totalECom,
-              value: totalECom.toString(),
-              icon: Clock,
-              change: "0",
-              changeType: "positive"
-            }
-          ])
+        const response = await fetch('/api/agents/stats')
+        if (!response.ok) {
+          throw new Error('Failed to fetch stats')
         }
+
+        const data = await response.json()
+        const { totals, averages } = data
+
+        setStatsData([
+          {
+            title: agentsContent.stats.totalAgents,
+            value: (totals?.totalAgents ?? 0).toString(),
+            icon: Users,
+            change: "+0",
+            changeType: "positive"
+          },
+          {
+            title: agentsContent.stats.totalSocMed,
+            value: (totals?.totalSocMed ?? 0).toString(),
+            icon: UserCheck,
+            change: "+0",
+            changeType: "positive"
+          },
+          {
+            title: agentsContent.stats.totalECom,
+            value: (totals?.totalECom ?? 0).toString(),
+            icon: Clock,
+            change: "0",
+            changeType: "positive"
+          }
+        ])
+
+        setScoreStats([
+          {
+            title: agentsContent.scoreStats.qaAverage,
+            value: (averages?.qaScore ?? 0).toFixed(1),
+            icon: Gauge
+          },
+          {
+            title: agentsContent.scoreStats.quizAverage,
+            value: (averages?.quizScore ?? 0).toFixed(1),
+            icon: GraduationCap
+          },
+          {
+            title: agentsContent.scoreStats.typingAverage,
+            value: (averages?.typingTestScore ?? 0).toFixed(1),
+            icon: Keyboard
+          }
+        ])
       } catch (error) {
         console.error('Error fetching stats:', error)
       }
@@ -158,6 +191,24 @@ export default function AgentsPage() {
                   <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
                   <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                   <p className="text-xs text-gray-500 mt-1">dari kemarin</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Score Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {scoreStats.map((stat, index) => {
+            const Icon = stat.icon
+            return (
+              <div key={index} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 flex items-center space-x-4">
+                <div className="p-3 bg-[#03438f]/10 rounded-2xl">
+                  <Icon className="h-6 w-6 text-[#03438f]" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 </div>
               </div>
             )
