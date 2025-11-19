@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { uploadProductFileServer, uploadSOPFileServer, uploadQTFileServer } from '@/lib/supabase-storage'
+import { uploadProductFileServer, uploadSOPFileServer, uploadQTFileServer, uploadAgentPhotoServer } from '@/lib/supabase-storage'
 
 interface SessionUser {
   id: string
@@ -37,7 +37,9 @@ export async function POST(request: NextRequest) {
 
     // Determine which upload function to use based on path
     let result
-    if (path.includes('jenis-sop') || path.includes('sop')) {
+    if (path.includes('agents') || path.includes('agent')) {
+      result = await uploadAgentPhotoServer(file, path)
+    } else if (path.includes('jenis-sop') || path.includes('sop')) {
       result = await uploadSOPFileServer(file, path)
     } else if (
       path.includes('quality-training') ||

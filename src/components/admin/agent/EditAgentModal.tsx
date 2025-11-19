@@ -4,11 +4,12 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { X, Save } from "lucide-react"
+import { X, Save, Clock, Info } from "lucide-react"
 
 interface AgentScores {
   id: string
   name: string
+  foto?: string | null
   qaScore?: number
   quizScore?: number
   typingTestScore?: number
@@ -107,6 +108,18 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Info Banner */}
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start space-x-3">
+            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900 mb-1">Penyimpanan Otomatis</p>
+              <p className="text-xs text-blue-700">
+                Nilai yang Anda simpan akan tersimpan sebagai record baru dengan timestamp otomatis. 
+                Riwayat performa agent dapat dilihat di histori performa.
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="qaScore">QA Score</Label>
             <Input
@@ -115,6 +128,7 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               value={formData.qaScore}
               onChange={(e) => handleInputChange("qaScore", e.target.value)}
               min={0}
+              placeholder="Masukkan nilai QA Score"
             />
           </div>
 
@@ -126,6 +140,7 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               value={formData.quizScore}
               onChange={(e) => handleInputChange("quizScore", e.target.value)}
               min={0}
+              placeholder="Masukkan nilai Quiz Score"
             />
           </div>
 
@@ -137,6 +152,7 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               value={formData.typingTestScore}
               onChange={(e) => handleInputChange("typingTestScore", e.target.value)}
               min={0}
+              placeholder="Masukkan nilai Typing Test Score"
             />
           </div>
 
@@ -146,23 +162,29 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
             </div>
           )}
 
-          <div className="flex items-center justify-end space-x-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-              Batal
-            </Button>
-            <Button type="submit" disabled={isLoading} className="bg-[#03438f] text-white">
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Menyimpan...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Save className="w-4 h-4" />
-                  <span>Simpan</span>
-                </div>
-              )}
-            </Button>
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center space-x-2 text-xs text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span>Timestamp akan tersimpan otomatis</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isLoading} className="bg-[#03438f] text-white">
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Menyimpan...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Nilai</span>
+                  </div>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

@@ -8,10 +8,32 @@ import { AddAgentModal } from "./AddAgentModal"
 import { EditAgentModal } from "./EditAgentModal"
 import agentsContent from "@/content/agents.json"
 
+function AgentAvatar({ foto, name, fallbackInitials }: { foto: string; name: string; fallbackInitials: string }) {
+  const [imageError, setImageError] = useState(false)
+
+  if (imageError) {
+    return (
+      <div className="h-10 w-10 rounded-full bg-[#03438f] flex items-center justify-center">
+        <span className="text-white font-medium text-sm">{fallbackInitials}</span>
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={foto}
+      alt={name}
+      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+      onError={() => setImageError(true)}
+    />
+  )
+}
+
 interface Agent {
   id: string
   name: string
   email: string
+  foto?: string | null
   role?: string
   category: string
   qaScore?: number
@@ -262,12 +284,20 @@ export function AgentsTable() {
                 <tr key={agent.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-[#03438f] flex items-center justify-center">
-                          <span className="text-white font-medium text-sm">
-                            {agent?.name?.split(' ').filter(Boolean).map(word => word[0].toUpperCase()).join('')}
-                          </span>
-                        </div>
+                      <div className="flex-shrink-0 h-10 w-10 relative">
+                        {agent.foto ? (
+                          <AgentAvatar
+                            foto={agent.foto}
+                            name={agent.name}
+                            fallbackInitials={agent?.name?.split(' ').filter(Boolean).map(word => word[0].toUpperCase()).join('')}
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-[#03438f] flex items-center justify-center">
+                            <span className="text-white font-medium text-sm">
+                              {agent?.name?.split(' ').filter(Boolean).map(word => word[0].toUpperCase()).join('')}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
@@ -391,12 +421,16 @@ export function AgentsTable() {
             setSelectedAgent(null)
           }}
           onUpdated={(updatedAgent) => {
+            // Update local state with new scores and foto
             setAgents(prev => prev.map(agent => agent.id === updatedAgent.id ? {
               ...agent,
+              foto: updatedAgent.foto,
               qaScore: updatedAgent.qaScore,
               quizScore: updatedAgent.quizScore,
               typingTestScore: updatedAgent.typingTestScore
             } : agent))
+            // Refresh data to ensure we have the latest performance record
+            fetchAgents()
           }}
         />
       )}

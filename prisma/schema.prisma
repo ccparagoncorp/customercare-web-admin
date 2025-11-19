@@ -177,13 +177,12 @@ model Agent {
   name      String
   email     String   @unique
   password  String
+  foto      String?  // URL foto dari Supabase bucket foto_agent
   category  String   @default("socialMedia")
-  qaScore   Int      @default(0)
-  quizScore Int      @default(0)
-  typingTestScore Int @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  performances Performance[]
 
   @@index([name])
   @@index([email])
@@ -191,6 +190,23 @@ model Agent {
   @@index([isActive])
   @@index([createdAt])
   @@map("agents")
+}
+
+model Performance {
+  id             String   @id @default(cuid())
+  agentId        String   @map("agent_id")
+  qaScore        Int      @default(0) @map("qa_score")
+  quizScore      Int      @default(0) @map("quiz_score")
+  typingTestScore Int     @default(0) @map("typing_test_score")
+  timestamp      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  agent          Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([timestamp])
+  @@index([agentId, timestamp])
+  @@map("performances")
 }
 
 model Knowledge {

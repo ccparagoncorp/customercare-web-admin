@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { createClient } from '@supabase/supabase-js'
 import { createPrismaClient, withRetry } from '@/lib/prisma'
 import { normalizeEmptyStrings } from '@/lib/utils/normalize'
+import { uploadAgentPhotoServer, deleteAgentPhotoServer } from '@/lib/supabase-storage'
 import bcrypt from 'bcryptjs'
 
 interface SessionUser {
@@ -57,15 +58,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = normalizeEmptyStrings(await request.json()) as {
-      name?: string
-      email?: string
-      password?: string
-      category?: string
-      qaScore?: number
-      quizScore?: number
-      typingTestScore?: number
+    // Handle both JSON and FormData
+    let body: any
+    let fotoUrl: string | null = null
+
+    const contentType = request.headers.get('content-type')
+    if (contentType?.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      body = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        category: formData.get('category') || 'socialMedia',
+        qaScore: formData.get('qaScore'),
+        quizScore: formData.get('quizScore'),
+        typingTestScore: formData.get('typingTestScore'),
+        foto: formData.get('foto') as File | null
+      }
+
+      // Handle foto upload if provided as File
+      const fotoFile = body.foto as File | null
+      if (fotoFile && fotoFile instanceof File && fotoFile.size > 0) {
+        const uploadResult = await uploadAgentPhotoServer(fotoFile, 'agents')
+        if (uploadResult.error) {
+          return NextResponse.json(
+            { message: `Failed to upload foto: ${uploadResult.error}` },
+            { status: 500 }
+          )
+        }
+        fotoUrl = uploadResult.url
+      } else if (typeof body.foto === 'string' && body.foto) {
+        // If foto is provided as URL string
+        fotoUrl = body.foto
+      }
+    } else {
+      body = normalizeEmptyStrings(await request.json()) as {
+        name?: string
+        email?: string
+        password?: string
+        category?: string
+        qaScore?: number
+        quizScore?: number
+        typingTestScore?: number
+        foto?: string
+      }
+      fotoUrl = body.foto || null
     }
+
     const {
       name,
       email,
@@ -181,13 +220,24 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password: hashedPassword, // Store hashed password
+        foto: fotoUrl,
         category: category,
-        isActive: true,
-        qaScore: parsedQaScore,
-        quizScore: parsedQuizScore,
-        typingTestScore: parsedTypingScore
+        isActive: true
       }
     }))
+
+    // Create initial Performance record if scores are provided
+    if (parsedQaScore > 0 || parsedQuizScore > 0 || parsedTypingScore > 0) {
+      await withRetry(() => prisma.performance.create({
+        data: {
+          agentId: newAgent.id,
+          qaScore: parsedQaScore,
+          quizScore: parsedQuizScore,
+          typingTestScore: parsedTypingScore,
+          timestamp: new Date() // Save timestamp for initial score
+        }
+      }))
+    }
 
     // Return success response
     return NextResponse.json(
@@ -197,10 +247,11 @@ export async function POST(request: NextRequest) {
           id: newAgent.id,
           name: newAgent.name,
           email: newAgent.email,
+          foto: newAgent.foto,
           category: newAgent.category,
-          qaScore: newAgent.qaScore,
-          quizScore: newAgent.quizScore,
-          typingTestScore: newAgent.typingTestScore,
+          qaScore: parsedQaScore,
+          quizScore: parsedQuizScore,
+          typingTestScore: parsedTypingScore,
           isActive: newAgent.isActive,
           createdAt: newAgent.createdAt
         }
@@ -272,10 +323,8 @@ export async function GET(request: NextRequest) {
           id: true,
           name: true,
           email: true,
+          foto: true,
           category: true,
-          qaScore: true,
-          quizScore: true,
-          typingTestScore: true,
           isActive: true,
           createdAt: true
         }
@@ -283,9 +332,33 @@ export async function GET(request: NextRequest) {
       withRetry(() => prisma.agent.count({ where }))
     ])
 
+    // Get latest performance for each agent
+    const agentsWithScores = await Promise.all(
+      agents.map(async (agent) => {
+        const latestPerformance = await withRetry(() => prisma.performance.findFirst({
+          where: { agentId: agent.id },
+          orderBy: { timestamp: 'desc' },
+          select: {
+            qaScore: true,
+            quizScore: true,
+            typingTestScore: true,
+            timestamp: true
+          }
+        }))
+
+        return {
+          ...agent,
+          foto: agent.foto,
+          qaScore: latestPerformance?.qaScore ?? 0,
+          quizScore: latestPerformance?.quizScore ?? 0,
+          typingTestScore: latestPerformance?.typingTestScore ?? 0
+        }
+      })
+    )
+
     // Return agents
     return NextResponse.json({
-      users: agents, // Keep 'users' key for compatibility with frontend
+      users: agentsWithScores, // Keep 'users' key for compatibility with frontend
       pagination: {
         page,
         limit,
@@ -324,13 +397,32 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const body = normalizeEmptyStrings(await request.json()) as {
-      id?: string
-      qaScore?: number
-      quizScore?: number
-      typingTestScore?: number
-      category?: string
-      isActive?: boolean
+    // Handle both JSON and FormData
+    let body: any
+    let fotoUrl: string | null | undefined = undefined
+
+    const contentType = request.headers.get('content-type')
+    if (contentType?.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      body = {
+        id: formData.get('id'),
+        qaScore: formData.get('qaScore'),
+        quizScore: formData.get('quizScore'),
+        typingTestScore: formData.get('typingTestScore'),
+        category: formData.get('category'),
+        isActive: formData.get('isActive'),
+        foto: formData.get('foto') as File | null
+      }
+    } else {
+      body = normalizeEmptyStrings(await request.json()) as {
+        id?: string
+        qaScore?: number
+        quizScore?: number
+        typingTestScore?: number
+        category?: string
+        isActive?: boolean
+        foto?: string | null
+      }
     }
 
     const { id, qaScore, quizScore, typingTestScore, category, isActive } = body
@@ -352,58 +444,168 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
+    // Handle foto upload if provided as File (after getting existingAgent)
+    if (contentType?.includes('multipart/form-data')) {
+      const fotoFile = body.foto as File | null
+      if (fotoFile && fotoFile instanceof File && fotoFile.size > 0) {
+        // Delete old foto if exists
+        if (existingAgent.foto) {
+          await deleteAgentPhotoServer(existingAgent.foto)
+        }
+        const uploadResult = await uploadAgentPhotoServer(fotoFile, 'agents')
+        if (uploadResult.error) {
+          return NextResponse.json(
+            { message: `Failed to upload foto: ${uploadResult.error}` },
+            { status: 500 }
+          )
+        }
+        fotoUrl = uploadResult.url
+      } else if (typeof body.foto === 'string') {
+        // If foto is provided as URL string (or null to remove)
+        fotoUrl = body.foto || null
+      }
+    } else {
+      fotoUrl = body.foto !== undefined ? body.foto : undefined
+    }
+
+    if (!existingAgent) {
+      return NextResponse.json(
+        { message: 'Agent not found' },
+        { status: 404 }
+      )
+    }
+
+    // Handle foto upload if provided as File (after getting existingAgent)
+    if (contentType?.includes('multipart/form-data')) {
+      const fotoFile = body.foto as File | null
+      if (fotoFile && fotoFile instanceof File && fotoFile.size > 0) {
+        // Delete old foto if exists
+        if (existingAgent.foto) {
+          await deleteAgentPhotoServer(existingAgent.foto)
+        }
+        const uploadResult = await uploadAgentPhotoServer(fotoFile, 'agents')
+        if (uploadResult.error) {
+          return NextResponse.json(
+            { message: `Failed to upload foto: ${uploadResult.error}` },
+            { status: 500 }
+          )
+        }
+        fotoUrl = uploadResult.url
+      } else if (typeof body.foto === 'string') {
+        // If foto is provided as URL string (or null to remove)
+        fotoUrl = body.foto || null
+      }
+    } else {
+      fotoUrl = body.foto !== undefined ? body.foto : undefined
+    }
+
     const parseScore = (value: unknown) => {
       if (value === null || value === undefined) return undefined
       const parsed = Number(value)
       return Number.isFinite(parsed) ? parsed : 0
     }
 
-    const updateData: {
-      qaScore?: number
-      quizScore?: number
-      typingTestScore?: number
+    // Update Agent fields (category, isActive, foto)
+    const updateAgentData: {
       category?: string
       isActive?: boolean
+      foto?: string | null
     } = {}
 
-    const parsedQa = parseScore(qaScore)
-    if (parsedQa !== undefined) updateData.qaScore = parsedQa
-
-    const parsedQuiz = parseScore(quizScore)
-    if (parsedQuiz !== undefined) updateData.quizScore = parsedQuiz
-
-    const parsedTyping = parseScore(typingTestScore)
-    if (parsedTyping !== undefined) updateData.typingTestScore = parsedTyping
-
-    if (category) updateData.category = category
-    if (typeof isActive === 'boolean') updateData.isActive = isActive
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { message: 'No valid fields to update' },
-        { status: 400 }
-      )
+    if (category) updateAgentData.category = category
+    if (typeof isActive === 'boolean') updateAgentData.isActive = isActive
+    if (fotoUrl !== undefined) {
+      // If foto is being removed (null), delete old foto
+      if (fotoUrl === null && existingAgent.foto) {
+        await deleteAgentPhotoServer(existingAgent.foto)
+      }
+      // If foto is being replaced, delete old foto
+      else if (fotoUrl && existingAgent.foto && existingAgent.foto !== fotoUrl) {
+        await deleteAgentPhotoServer(existingAgent.foto)
+      }
+      updateAgentData.foto = fotoUrl
     }
 
-    const updatedAgent = await withRetry(() => prisma.agent.update({
-      where: { id },
-      data: updateData,
+    // Handle score updates - create Performance record
+    const hasScoreUpdate = qaScore !== undefined || quizScore !== undefined || typingTestScore !== undefined
+    let performanceRecord = null
+
+    if (hasScoreUpdate) {
+      const parsedQa = parseScore(qaScore)
+      const parsedQuiz = parseScore(quizScore)
+      const parsedTyping = parseScore(typingTestScore)
+
+      // Create new Performance record with timestamp
+      performanceRecord = await withRetry(() => prisma.performance.create({
+        data: {
+          agentId: id,
+          qaScore: parsedQa ?? 0,
+          quizScore: parsedQuiz ?? 0,
+          typingTestScore: parsedTyping ?? 0,
+          timestamp: new Date() // Automatically save current timestamp
+        }
+      }))
+    }
+
+    // Update Agent if needed
+    let updatedAgent: {
+      id: string
+      name: string
+      email: string
+      foto: string | null
+      category: string
+      isActive: boolean
+      createdAt: Date
+      updatedAt: Date
+    } = {
+      id: existingAgent.id,
+      name: existingAgent.name,
+      email: existingAgent.email,
+      foto: existingAgent.foto,
+      category: existingAgent.category,
+      isActive: existingAgent.isActive,
+      createdAt: existingAgent.createdAt,
+      updatedAt: existingAgent.updatedAt
+    }
+
+    if (Object.keys(updateAgentData).length > 0) {
+      updatedAgent = await withRetry(() => prisma.agent.update({
+        where: { id },
+        data: updateAgentData,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          foto: true,
+          category: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }))
+    }
+
+    // Get latest performance for response
+    const latestPerformance = await withRetry(() => prisma.performance.findFirst({
+      where: { agentId: id },
+      orderBy: { timestamp: 'desc' },
       select: {
-        id: true,
-        name: true,
-        email: true,
-        category: true,
         qaScore: true,
         quizScore: true,
         typingTestScore: true,
-        isActive: true,
-        createdAt: true
+        timestamp: true
       }
     }))
 
     return NextResponse.json({
       message: 'Agent updated successfully',
-      agent: updatedAgent
+      agent: {
+        ...updatedAgent,
+        foto: updatedAgent.foto,
+        qaScore: latestPerformance?.qaScore ?? 0,
+        quizScore: latestPerformance?.quizScore ?? 0,
+        typingTestScore: latestPerformance?.typingTestScore ?? 0
+      }
     })
 
   } catch (error) {
@@ -467,6 +669,11 @@ export async function DELETE(request: NextRequest) {
         { message: 'Error deleting user from authentication system' },
         { status: 500 }
       )
+    }
+
+    // Delete agent foto from storage if exists
+    if (existingAgent.foto) {
+      await deleteAgentPhotoServer(existingAgent.foto)
     }
 
     // Delete agent from database

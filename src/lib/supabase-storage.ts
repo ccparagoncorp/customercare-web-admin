@@ -8,6 +8,7 @@ const productBucketName = process.env.PRODUCT_BUCKET_NAME || 'products'
 const sopBucketName = process.env.SOP_BUCKET_NAME || 'sop'
 // Use ONE client-exposed env for QT uploads (browser needs access)
 const qtBucketName = process.env.NEXT_PUBLIC_QT_BUCKET_NAME || 'quality-training'
+const agentPhotoBucketName = 'foto_agent'
 
 // Client-side supabase (anon)
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -413,5 +414,68 @@ export async function deleteSOPFilesServer(pathsOrUrls: string[]): Promise<{ suc
   } catch (e) {
     console.error('SOP batch delete (server) unexpected error:', e)
     return { success: false, error: 'Failed to delete SOP files (server)', deleted: 0 }
+  }
+}
+
+// Agent photo-specific upload functions
+export async function uploadAgentPhoto(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    // Use server-side upload to bypass RLS
+    return await uploadAgentPhotoServer(file, path)
+  } catch (error) {
+    console.error('Agent photo upload error:', error)
+    return { url: null, error: 'Failed to upload agent photo' }
+  }
+}
+
+// Server-only agent photo upload
+export async function uploadAgentPhotoServer(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 15)
+    const fileExtension = file.name.split('.').pop()
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`
+    const fullPath = `${path}/${fileName}`
+
+    const { error } = await retry(() => serverSupabase.storage
+      .from(agentPhotoBucketName)
+      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 2000)
+
+    if (error) {
+      console.error('Agent photo upload (server) error:', error)
+      return { url: null, error: error.message }
+    }
+
+    const { data: urlData } = serverSupabase.storage
+      .from(agentPhotoBucketName)
+      .getPublicUrl(fullPath)
+
+    return { url: urlData.publicUrl, error: null }
+  } catch (error) {
+    console.error('Agent photo upload (server) error:', error)
+    return { url: null, error: 'Failed to upload agent photo (server)' }
+  }
+}
+
+// Server-only agent photo delete
+export async function deleteAgentPhotoServer(pathOrUrl: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const path = pathOrUrl.startsWith('http') ? extractPathFromPublicUrl(pathOrUrl) : pathOrUrl
+    if (!path) {
+      return { success: false, error: 'Invalid agent photo storage path or URL' }
+    }
+    const { error } = await serverSupabase.storage
+      .from(agentPhotoBucketName)
+      .remove([path])
+    if (error) {
+      console.error('Agent photo delete (server) error:', error)
+      return { success: false, error: error.message }
+    }
+    return { success: true, error: null }
+  } catch (e) {
+    console.error('Agent photo delete (server) unexpected error:', e)
+    return { success: false, error: 'Failed to delete agent photo (server)' }
   }
 }
