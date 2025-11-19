@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, Trash2, Eye, X, Pencil } from "lucide-react"
@@ -20,11 +21,14 @@ function AgentAvatar({ foto, name, fallbackInitials }: { foto: string; name: str
   }
 
   return (
-    <img
+    <Image
       src={foto}
       alt={name}
+      width={40}
+      height={40}
       className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
       onError={() => setImageError(true)}
+      unoptimized
     />
   )
 }

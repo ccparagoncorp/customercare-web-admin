@@ -59,20 +59,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle both JSON and FormData
-    let body: any
+    type AgentBody = {
+      name?: string
+      email?: string
+      password?: string
+      category?: string
+      qaScore?: number | string
+      quizScore?: number | string
+      typingTestScore?: number | string
+      foto?: string | File | null
+    }
+    let body: AgentBody
     let fotoUrl: string | null = null
 
     const contentType = request.headers.get('content-type')
     if (contentType?.includes('multipart/form-data')) {
       const formData = await request.formData()
       body = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        password: formData.get('password'),
-        category: formData.get('category') || 'socialMedia',
-        qaScore: formData.get('qaScore'),
-        quizScore: formData.get('quizScore'),
-        typingTestScore: formData.get('typingTestScore'),
+        name: formData.get('name') as string | undefined,
+        email: formData.get('email') as string | undefined,
+        password: formData.get('password') as string | undefined,
+        category: (formData.get('category') as string | undefined) || 'socialMedia',
+        qaScore: formData.get('qaScore') as string | undefined,
+        quizScore: formData.get('quizScore') as string | undefined,
+        typingTestScore: formData.get('typingTestScore') as string | undefined,
         foto: formData.get('foto') as File | null
       }
 
@@ -102,7 +112,7 @@ export async function POST(request: NextRequest) {
         typingTestScore?: number
         foto?: string
       }
-      fotoUrl = body.foto || null
+      fotoUrl = typeof body.foto === 'string' ? body.foto : null
     }
 
     const {
@@ -398,19 +408,28 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Handle both JSON and FormData
-    let body: any
+    type UpdateAgentBody = {
+      id?: string
+      qaScore?: number | string
+      quizScore?: number | string
+      typingTestScore?: number | string
+      category?: string
+      isActive?: boolean | string
+      foto?: string | File | null
+    }
+    let body: UpdateAgentBody
     let fotoUrl: string | null | undefined = undefined
 
     const contentType = request.headers.get('content-type')
     if (contentType?.includes('multipart/form-data')) {
       const formData = await request.formData()
       body = {
-        id: formData.get('id'),
-        qaScore: formData.get('qaScore'),
-        quizScore: formData.get('quizScore'),
-        typingTestScore: formData.get('typingTestScore'),
-        category: formData.get('category'),
-        isActive: formData.get('isActive'),
+        id: formData.get('id') as string | undefined,
+        qaScore: formData.get('qaScore') as string | undefined,
+        quizScore: formData.get('quizScore') as string | undefined,
+        typingTestScore: formData.get('typingTestScore') as string | undefined,
+        category: formData.get('category') as string | undefined,
+        isActive: formData.get('isActive') as string | undefined,
         foto: formData.get('foto') as File | null
       }
     } else {
@@ -465,7 +484,7 @@ export async function PATCH(request: NextRequest) {
         fotoUrl = body.foto || null
       }
     } else {
-      fotoUrl = body.foto !== undefined ? body.foto : undefined
+      fotoUrl = typeof body.foto === 'string' ? body.foto : (body.foto === null ? null : undefined)
     }
 
     if (!existingAgent) {
@@ -476,7 +495,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Handle foto upload if provided as File (after getting existingAgent)
-    if (contentType?.includes('multipart/form-data')) {
+    // Note: fotoUrl already set above, but we need to handle file upload here
+    if (contentType?.includes('multipart/form-data') && fotoUrl === undefined) {
       const fotoFile = body.foto as File | null
       if (fotoFile && fotoFile instanceof File && fotoFile.size > 0) {
         // Delete old foto if exists
@@ -495,8 +515,8 @@ export async function PATCH(request: NextRequest) {
         // If foto is provided as URL string (or null to remove)
         fotoUrl = body.foto || null
       }
-    } else {
-      fotoUrl = body.foto !== undefined ? body.foto : undefined
+    } else if (!contentType?.includes('multipart/form-data')) {
+      fotoUrl = typeof body.foto === 'string' ? body.foto : (body.foto === null ? null : undefined)
     }
 
     const parseScore = (value: unknown) => {
@@ -528,7 +548,6 @@ export async function PATCH(request: NextRequest) {
 
     // Handle score updates - create Performance record
     const hasScoreUpdate = qaScore !== undefined || quizScore !== undefined || typingTestScore !== undefined
-    let performanceRecord = null
 
     if (hasScoreUpdate) {
       const parsedQa = parseScore(qaScore)
@@ -536,7 +555,7 @@ export async function PATCH(request: NextRequest) {
       const parsedTyping = parseScore(typingTestScore)
 
       // Create new Performance record with timestamp
-      performanceRecord = await withRetry(() => prisma.performance.create({
+      await withRetry(() => prisma.performance.create({
         data: {
           agentId: id,
           qaScore: parsedQa ?? 0,
