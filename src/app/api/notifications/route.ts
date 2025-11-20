@@ -409,8 +409,6 @@ export async function GET(request: NextRequest) {
 
 // Mark notifications as read
 export async function POST(request: NextRequest) {
-  const prisma = createPrismaClient()
-
   try {
     const session = await getServerSession(authOptions) as Session | null
     if (!session || !session.user) {

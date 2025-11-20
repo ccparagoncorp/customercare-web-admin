@@ -344,7 +344,7 @@ export async function GET(request: NextRequest) {
 
     // Optimize: Get latest performance for all agents in a single batch query
     const agentIds = agents.map(a => a.id)
-    let performancesMap = new Map<string, { qaScore: number; quizScore: number; typingTestScore: number }>()
+    const performancesMap = new Map<string, { qaScore: number; quizScore: number; typingTestScore: number }>()
     
     if (agentIds.length > 0) {
       // Fetch all performances for these agents in one query, then filter to latest per agent
