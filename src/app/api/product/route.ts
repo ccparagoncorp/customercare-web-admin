@@ -92,25 +92,75 @@ export async function GET(request: NextRequest) {
     }
 
     const prisma = createPrismaClient()
+    // Optimize: Use select instead of include for better performance, limit detailProduks to just IDs
     const products = await withRetry(() => prisma.produk.findMany({
       where,
-      include: {
-        brand: true,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        kapasitas: true,
+        harga: true,
+        status: true,
+        images: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: true,
+        updatedBy: true,
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            images: true,
+            colorbase: true
+          }
+        },
         subkategoriProduk: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            images: true,
             kategoriProduk: {
-              include: {
-                brand: true
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                images: true,
+                brand: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
               }
             }
           }
         },
         kategoriProduk: {
-          include: {
-            brand: true
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            images: true,
+            brand: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         },
-        detailProduks: true
+        // Include detailProduks but limit fields to reduce payload
+        detailProduks: {
+          select: {
+            id: true,
+            name: true,
+            detail: true,
+            images: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'

@@ -309,31 +309,13 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
     updateDetail(detailIndex, 'images', detail.images.filter((_, i) => i !== imageIndex))
   }
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
-  if (!session) {
+  // Don't block UI with session loading - show layout immediately
+  if (!session && status !== 'loading') {
     return null
   }
 
-  // Show loading state while fetching data
-  if (fetching) {
-    return (
-      <AdminLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Memuat data produk...</p>
-          </div>
-        </div>
-      </AdminLayout>
-    )
-  }
+  // Show minimal loading indicator instead of full-page spinner
+  const isLoading = status === 'loading' || fetching
 
   // Show error state if there's an error and no product data
   if (error && !product) {
@@ -423,10 +405,15 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold mb-2">{sections.product.form.title.edit}</h1>
-              <p className="text-blue-100 text-lg">Edit produk: {product.name}</p>
+              <p className="text-blue-100 text-lg">
+                {isLoading ? 'Memuat data produk...' : `Edit produk: ${product?.name || ''}`}
+              </p>
             </div>
+            {isLoading && (
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            )}
           </div>
         </div>
 
@@ -450,7 +437,15 @@ export default function EditProduct({ params }: { params: Promise<{ id: string }
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 relative">
+          {isLoading && !product && (
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-2xl">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Memuat data...</p>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Edit Information */}
             <div className="space-y-6">

@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
         query,
       })
     } finally {
-      await prisma.$disconnect()
+      // Don't disconnect - let Prisma connection pool manage connections for better performance
     }
   } catch (error) {
     console.error('Error searching:', error)

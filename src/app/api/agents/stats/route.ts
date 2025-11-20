@@ -50,26 +50,41 @@ export async function GET() {
     const totalSocMed = categoryCounts.find(group => group.category === 'socialMedia')?._count?._all ?? 0
     const totalECom = categoryCounts.find(group => group.category === 'eCommerce')?._count?._all ?? 0
 
-    // Get latest performance for each agent
-    const latestPerformances = await Promise.all(
-      agents.map(agent =>
-        withRetry(() => prisma.performance.findFirst({
-          where: { agentId: agent.id },
-          orderBy: { timestamp: 'desc' },
-          select: {
-            qaScore: true,
-            quizScore: true,
-            typingTestScore: true
-          }
-        }))
-      )
-    )
+    // Optimize: Get latest performance for all agents in a single batch query
+    const agentIds = agents.map(a => a.id)
+    let performancesMap = new Map<string, { qaScore: number; quizScore: number; typingTestScore: number }>()
+    
+    if (agentIds.length > 0) {
+      // Fetch all performances for these agents in one query, then filter to latest per agent
+      const allPerformances = await withRetry(() => prisma.performance.findMany({
+        where: { agentId: { in: agentIds } },
+        orderBy: { timestamp: 'desc' },
+        select: {
+          agentId: true,
+          qaScore: true,
+          quizScore: true,
+          typingTestScore: true
+        }
+      }))
+
+      // Group by agentId and take the first (latest) performance for each
+      allPerformances.forEach(perf => {
+        if (!performancesMap.has(perf.agentId)) {
+          performancesMap.set(perf.agentId, {
+            qaScore: perf.qaScore ?? 0,
+            quizScore: perf.quizScore ?? 0,
+            typingTestScore: perf.typingTestScore ?? 0
+          })
+        }
+      })
+    }
 
     // Calculate averages from latest performances (treat missing scores as 0)
+    const latestPerformances = Array.from(performancesMap.values())
     const averages = totalAgents > 0 ? {
-      qaScore: latestPerformances.reduce((sum, p) => sum + (p?.qaScore ?? 0), 0) / totalAgents,
-      quizScore: latestPerformances.reduce((sum, p) => sum + (p?.quizScore ?? 0), 0) / totalAgents,
-      typingTestScore: latestPerformances.reduce((sum, p) => sum + (p?.typingTestScore ?? 0), 0) / totalAgents
+      qaScore: latestPerformances.reduce((sum, p) => sum + p.qaScore, 0) / totalAgents,
+      quizScore: latestPerformances.reduce((sum, p) => sum + p.quizScore, 0) / totalAgents,
+      typingTestScore: latestPerformances.reduce((sum, p) => sum + p.typingTestScore, 0) / totalAgents
     } : {
       qaScore: 0,
       quizScore: 0,

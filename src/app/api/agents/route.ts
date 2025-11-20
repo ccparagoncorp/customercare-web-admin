@@ -342,29 +342,46 @@ export async function GET(request: NextRequest) {
       withRetry(() => prisma.agent.count({ where }))
     ])
 
-    // Get latest performance for each agent
-    const agentsWithScores = await Promise.all(
-      agents.map(async (agent) => {
-        const latestPerformance = await withRetry(() => prisma.performance.findFirst({
-          where: { agentId: agent.id },
-          orderBy: { timestamp: 'desc' },
-          select: {
-            qaScore: true,
-            quizScore: true,
-            typingTestScore: true,
-            timestamp: true
-          }
-        }))
+    // Optimize: Get latest performance for all agents in a single batch query
+    const agentIds = agents.map(a => a.id)
+    let performancesMap = new Map<string, { qaScore: number; quizScore: number; typingTestScore: number }>()
+    
+    if (agentIds.length > 0) {
+      // Fetch all performances for these agents in one query, then filter to latest per agent
+      const allPerformances = await withRetry(() => prisma.performance.findMany({
+        where: { agentId: { in: agentIds } },
+        orderBy: { timestamp: 'desc' },
+        select: {
+          agentId: true,
+          qaScore: true,
+          quizScore: true,
+          typingTestScore: true
+        }
+      }))
 
-        return {
-          ...agent,
-          foto: agent.foto,
-          qaScore: latestPerformance?.qaScore ?? 0,
-          quizScore: latestPerformance?.quizScore ?? 0,
-          typingTestScore: latestPerformance?.typingTestScore ?? 0
+      // Group by agentId and take the first (latest) performance for each
+      allPerformances.forEach(perf => {
+        if (!performancesMap.has(perf.agentId)) {
+          performancesMap.set(perf.agentId, {
+            qaScore: perf.qaScore ?? 0,
+            quizScore: perf.quizScore ?? 0,
+            typingTestScore: perf.typingTestScore ?? 0
+          })
         }
       })
-    )
+    }
+
+    // Map agents with their performance scores
+    const agentsWithScores = agents.map(agent => {
+      const performance = performancesMap.get(agent.id)
+      return {
+        ...agent,
+        foto: agent.foto,
+        qaScore: performance?.qaScore ?? 0,
+        quizScore: performance?.quizScore ?? 0,
+        typingTestScore: performance?.typingTestScore ?? 0
+      }
+    })
 
     // Return agents
     return NextResponse.json({

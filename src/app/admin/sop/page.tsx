@@ -206,15 +206,8 @@ function SOPManagementContent() {
     }
   }
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
-  if (!session) {
+  // Don't block UI with session loading - show layout immediately
+  if (!session && status !== 'loading') {
     return null
   }
 

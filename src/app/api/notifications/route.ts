@@ -403,11 +403,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   } finally {
-    try {
-      await prisma.$disconnect()
-    } catch (disconnectError) {
-      console.warn('Error disconnecting Prisma client:', disconnectError)
-    }
+    // Don't disconnect - let Prisma connection pool manage connections for better performance
   }
 }
 
@@ -453,10 +449,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   } finally {
-    try {
-      await prisma.$disconnect()
-    } catch (disconnectError) {
-      console.warn('Error disconnecting Prisma client:', disconnectError)
-    }
+    // Don't disconnect - let Prisma connection pool manage connections for better performance
   }
 }

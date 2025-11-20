@@ -85,7 +85,7 @@ export async function GET(
 
       return NextResponse.json(product)
     } finally {
-      await prisma.$disconnect()
+      // Don't disconnect - let Prisma connection pool manage connections for better performance
     }
   } catch (error) {
     console.error('Error fetching product:', error)
