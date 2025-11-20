@@ -556,29 +556,32 @@ export async function PATCH(request: NextRequest) {
 
       // Get current date for checking same month
       const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() // 0-11 (0 = January, 11 = December)
-
-      // Find existing Performance record in the same month
-      const existingPerformance = await withRetry(() => prisma.performance.findFirst({
-        where: {
-          agentId: id,
-          timestamp: {
-            gte: new Date(currentYear, currentMonth, 1), // Start of current month
-            lt: new Date(currentYear, currentMonth + 1, 1) // Start of next month
-          }
+      
+      // Use raw SQL to find existing Performance record in the same month
+      // Using date_trunc to compare only year-month, ignoring day and time
+      const existingPerformance = await withRetry(async () => {
+        const results = await prisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id 
+          FROM performances 
+          WHERE agent_id = ${id}
+            AND date_trunc('month', timestamp) = date_trunc('month', ${now}::timestamp)
+          LIMIT 1
+        `
+        if (results && results.length > 0) {
+          return results[0].id
         }
-      }))
+        return null
+      })
 
       if (existingPerformance) {
-        // Update existing record in the same month
+        // Update existing record using Prisma (to handle updatedAt automatically)
         await withRetry(() => prisma.performance.update({
-          where: { id: existingPerformance.id },
+          where: { id: existingPerformance },
           data: {
             qaScore: parsedQa ?? 0,
             quizScore: parsedQuiz ?? 0,
             typingTestScore: parsedTyping ?? 0,
-            timestamp: now // Update timestamp to current time
+            timestamp: now
           }
         }))
       } else {
