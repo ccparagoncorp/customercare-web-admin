@@ -546,7 +546,7 @@ export async function PATCH(request: NextRequest) {
       updateAgentData.foto = fotoUrl
     }
 
-    // Handle score updates - create Performance record
+    // Handle score updates - create or update Performance record
     const hasScoreUpdate = qaScore !== undefined || quizScore !== undefined || typingTestScore !== undefined
 
     if (hasScoreUpdate) {
@@ -554,16 +554,45 @@ export async function PATCH(request: NextRequest) {
       const parsedQuiz = parseScore(quizScore)
       const parsedTyping = parseScore(typingTestScore)
 
-      // Create new Performance record with timestamp
-      await withRetry(() => prisma.performance.create({
-        data: {
+      // Get current date for checking same month
+      const now = new Date()
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth() // 0-11 (0 = January, 11 = December)
+
+      // Find existing Performance record in the same month
+      const existingPerformance = await withRetry(() => prisma.performance.findFirst({
+        where: {
           agentId: id,
-          qaScore: parsedQa ?? 0,
-          quizScore: parsedQuiz ?? 0,
-          typingTestScore: parsedTyping ?? 0,
-          timestamp: new Date() // Automatically save current timestamp
+          timestamp: {
+            gte: new Date(currentYear, currentMonth, 1), // Start of current month
+            lt: new Date(currentYear, currentMonth + 1, 1) // Start of next month
+          }
         }
       }))
+
+      if (existingPerformance) {
+        // Update existing record in the same month
+        await withRetry(() => prisma.performance.update({
+          where: { id: existingPerformance.id },
+          data: {
+            qaScore: parsedQa ?? 0,
+            quizScore: parsedQuiz ?? 0,
+            typingTestScore: parsedTyping ?? 0,
+            timestamp: now // Update timestamp to current time
+          }
+        }))
+      } else {
+        // Create new Performance record if no record exists in current month
+        await withRetry(() => prisma.performance.create({
+          data: {
+            agentId: id,
+            qaScore: parsedQa ?? 0,
+            quizScore: parsedQuiz ?? 0,
+            typingTestScore: parsedTyping ?? 0,
+            timestamp: now
+          }
+        }))
+      }
     }
 
     // Update Agent if needed

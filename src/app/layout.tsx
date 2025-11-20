@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Admin Customer Care Paragon",
   description: "Sistem administrasi customer care Paragon",
+  icons: {
+    icon: "/logomini.png",
+  },
 };
 
 export default function RootLayout({

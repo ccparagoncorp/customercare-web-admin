@@ -128,6 +128,7 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               value={formData.qaScore}
               onChange={(e) => handleInputChange("qaScore", e.target.value)}
               min={0}
+              max={100}
               placeholder="Masukkan nilai QA Score"
             />
           </div>
@@ -140,6 +141,7 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               value={formData.quizScore}
               onChange={(e) => handleInputChange("quizScore", e.target.value)}
               min={0}
+              max={100}
               placeholder="Masukkan nilai Quiz Score"
             />
           </div>
@@ -152,6 +154,7 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               value={formData.typingTestScore}
               onChange={(e) => handleInputChange("typingTestScore", e.target.value)}
               min={0}
+              max={100}
               placeholder="Masukkan nilai Typing Test Score"
             />
           </div>
