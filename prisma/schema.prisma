@@ -198,6 +198,11 @@ model Performance {
   qaScore        Int      @default(0) @map("qa_score")
   quizScore      Int      @default(0) @map("quiz_score")
   typingTestScore Int     @default(0) @map("typing_test_score")
+  afrt           Int      @default(0)
+  art            Int      @default(0)
+  rt             Int      @default(0)
+  rr             Int      @default(0)
+  csat           Int      @default(0)
   timestamp      DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

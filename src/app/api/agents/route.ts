@@ -262,6 +262,11 @@ export async function POST(request: NextRequest) {
           qaScore: parsedQaScore,
           quizScore: parsedQuizScore,
           typingTestScore: parsedTypingScore,
+          afrt: 0,
+          art: 0,
+          rt: 0,
+          rr: 0,
+          csat: 0,
           isActive: newAgent.isActive,
           createdAt: newAgent.createdAt
         }
@@ -344,7 +349,16 @@ export async function GET(request: NextRequest) {
 
     // Optimize: Get latest performance for all agents in a single batch query
     const agentIds = agents.map(a => a.id)
-    const performancesMap = new Map<string, { qaScore: number; quizScore: number; typingTestScore: number }>()
+    const performancesMap = new Map<string, {
+      qaScore: number
+      quizScore: number
+      typingTestScore: number
+      afrt: number
+      art: number
+      rt: number
+      rr: number
+      csat: number
+    }>()
     
     if (agentIds.length > 0) {
       // Fetch all performances for these agents in one query, then filter to latest per agent
@@ -355,7 +369,12 @@ export async function GET(request: NextRequest) {
           agentId: true,
           qaScore: true,
           quizScore: true,
-          typingTestScore: true
+          typingTestScore: true,
+          afrt: true,
+          art: true,
+          rt: true,
+          rr: true,
+          csat: true
         }
       }))
 
@@ -365,7 +384,12 @@ export async function GET(request: NextRequest) {
           performancesMap.set(perf.agentId, {
             qaScore: perf.qaScore ?? 0,
             quizScore: perf.quizScore ?? 0,
-            typingTestScore: perf.typingTestScore ?? 0
+            typingTestScore: perf.typingTestScore ?? 0,
+            afrt: perf.afrt ?? 0,
+            art: perf.art ?? 0,
+            rt: perf.rt ?? 0,
+            rr: perf.rr ?? 0,
+            csat: perf.csat ?? 0
           })
         }
       })
@@ -379,7 +403,12 @@ export async function GET(request: NextRequest) {
         foto: agent.foto,
         qaScore: performance?.qaScore ?? 0,
         quizScore: performance?.quizScore ?? 0,
-        typingTestScore: performance?.typingTestScore ?? 0
+        typingTestScore: performance?.typingTestScore ?? 0,
+        afrt: performance?.afrt ?? 0,
+        art: performance?.art ?? 0,
+        rt: performance?.rt ?? 0,
+        rr: performance?.rr ?? 0,
+        csat: performance?.csat ?? 0
       }
     })
 
@@ -430,6 +459,11 @@ export async function PATCH(request: NextRequest) {
       qaScore?: number | string
       quizScore?: number | string
       typingTestScore?: number | string
+      afrt?: number | string
+      art?: number | string
+      rt?: number | string
+      rr?: number | string
+      csat?: number | string
       category?: string
       isActive?: boolean | string
       foto?: string | File | null
@@ -445,6 +479,11 @@ export async function PATCH(request: NextRequest) {
         qaScore: formData.get('qaScore') as string | undefined,
         quizScore: formData.get('quizScore') as string | undefined,
         typingTestScore: formData.get('typingTestScore') as string | undefined,
+        afrt: formData.get('afrt') as string | undefined,
+        art: formData.get('art') as string | undefined,
+        rt: formData.get('rt') as string | undefined,
+        rr: formData.get('rr') as string | undefined,
+        csat: formData.get('csat') as string | undefined,
         category: formData.get('category') as string | undefined,
         isActive: formData.get('isActive') as string | undefined,
         foto: formData.get('foto') as File | null
@@ -455,13 +494,30 @@ export async function PATCH(request: NextRequest) {
         qaScore?: number
         quizScore?: number
         typingTestScore?: number
+        afrt?: number
+        art?: number
+        rt?: number
+        rr?: number
+        csat?: number
         category?: string
         isActive?: boolean
         foto?: string | null
       }
     }
 
-    const { id, qaScore, quizScore, typingTestScore, category, isActive } = body
+    const {
+      id,
+      qaScore,
+      quizScore,
+      typingTestScore,
+      afrt,
+      art,
+      rt,
+      rr,
+      csat,
+      category,
+      isActive
+    } = body
 
     if (!id) {
       return NextResponse.json(
@@ -564,12 +620,25 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Handle score updates - create or update Performance record
-    const hasScoreUpdate = qaScore !== undefined || quizScore !== undefined || typingTestScore !== undefined
+    const hasScoreUpdate =
+      qaScore !== undefined ||
+      quizScore !== undefined ||
+      typingTestScore !== undefined ||
+      afrt !== undefined ||
+      art !== undefined ||
+      rt !== undefined ||
+      rr !== undefined ||
+      csat !== undefined
 
     if (hasScoreUpdate) {
       const parsedQa = parseScore(qaScore)
       const parsedQuiz = parseScore(quizScore)
       const parsedTyping = parseScore(typingTestScore)
+      const parsedAfrt = parseScore(afrt)
+      const parsedArt = parseScore(art)
+      const parsedRt = parseScore(rt)
+      const parsedRr = parseScore(rr)
+      const parsedCsat = parseScore(csat)
 
       // Get current date for checking same month
       const now = new Date()
@@ -598,6 +667,11 @@ export async function PATCH(request: NextRequest) {
             qaScore: parsedQa ?? 0,
             quizScore: parsedQuiz ?? 0,
             typingTestScore: parsedTyping ?? 0,
+            afrt: parsedAfrt ?? 0,
+            art: parsedArt ?? 0,
+            rt: parsedRt ?? 0,
+            rr: parsedRr ?? 0,
+            csat: parsedCsat ?? 0,
             timestamp: now
           }
         }))
@@ -609,6 +683,11 @@ export async function PATCH(request: NextRequest) {
             qaScore: parsedQa ?? 0,
             quizScore: parsedQuiz ?? 0,
             typingTestScore: parsedTyping ?? 0,
+            afrt: parsedAfrt ?? 0,
+            art: parsedArt ?? 0,
+            rt: parsedRt ?? 0,
+            rr: parsedRr ?? 0,
+            csat: parsedCsat ?? 0,
             timestamp: now
           }
         }))
@@ -661,6 +740,11 @@ export async function PATCH(request: NextRequest) {
         qaScore: true,
         quizScore: true,
         typingTestScore: true,
+        afrt: true,
+        art: true,
+        rt: true,
+        rr: true,
+        csat: true,
         timestamp: true
       }
     }))
@@ -672,7 +756,12 @@ export async function PATCH(request: NextRequest) {
         foto: updatedAgent.foto,
         qaScore: latestPerformance?.qaScore ?? 0,
         quizScore: latestPerformance?.quizScore ?? 0,
-        typingTestScore: latestPerformance?.typingTestScore ?? 0
+        typingTestScore: latestPerformance?.typingTestScore ?? 0,
+        afrt: latestPerformance?.afrt ?? 0,
+        art: latestPerformance?.art ?? 0,
+        rt: latestPerformance?.rt ?? 0,
+        rr: latestPerformance?.rr ?? 0,
+        csat: latestPerformance?.csat ?? 0
       }
     })
 

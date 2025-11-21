@@ -170,8 +170,9 @@ export function UploadScoresModal({ isOpen, onClose, onSuccess }: UploadScoresMo
                   Format File Excel:
                 </h3>
                 <div className="text-sm text-blue-800 space-y-1">
-                  <p>• Baris pertama harus berisi header: <strong>nama</strong>, <strong>qascore</strong>, <strong>quizscore</strong>, <strong>typingtestscore</strong></p>
+                  <p>• Baris pertama harus berisi header: <strong>nama</strong>, <strong>qascore</strong>, <strong>quizscore</strong>, <strong>typingtestscore</strong>, <strong>afrt</strong>, <strong>art</strong>, <strong>rt</strong>, <strong>rr</strong>, <strong>csat</strong></p>
                   <p>• Nama harus sesuai dengan nama agent di database (case-insensitive)</p>
+                  <p>• Kolom score bersifat opsional (jika tidak ada akan diisi 0)</p>
                   <p>• Nilai akan di-update untuk bulan saat ini</p>
                   <p>• Jika sudah ada data di bulan yang sama, data lama akan di-replace</p>
                 </div>

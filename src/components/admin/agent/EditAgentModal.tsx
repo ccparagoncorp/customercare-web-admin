@@ -13,6 +13,11 @@ interface AgentScores {
   qaScore?: number
   quizScore?: number
   typingTestScore?: number
+  afrt?: number
+  art?: number
+  rt?: number
+  rr?: number
+  csat?: number
 }
 
 interface EditAgentModalProps {
@@ -26,7 +31,12 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
   const [formData, setFormData] = useState({
     qaScore: 0,
     quizScore: 0,
-    typingTestScore: 0
+    typingTestScore: 0,
+    afrt: 0,
+    art: 0,
+    rt: 0,
+    rr: 0,
+    csat: 0
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +46,12 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
       setFormData({
         qaScore: agent.qaScore ?? 0,
         quizScore: agent.quizScore ?? 0,
-        typingTestScore: agent.typingTestScore ?? 0
+        typingTestScore: agent.typingTestScore ?? 0,
+        afrt: agent.afrt ?? 0,
+        art: agent.art ?? 0,
+        rt: agent.rt ?? 0,
+        rr: agent.rr ?? 0,
+        csat: agent.csat ?? 0
       })
       setError(null)
     }
@@ -69,7 +84,12 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
           id: agent.id,
           qaScore: formData.qaScore,
           quizScore: formData.quizScore,
-          typingTestScore: formData.typingTestScore
+          typingTestScore: formData.typingTestScore,
+          afrt: formData.afrt,
+          art: formData.art,
+          rt: formData.rt,
+          rr: formData.rr,
+          csat: formData.csat
         })
       })
 
@@ -157,6 +177,65 @@ export function EditAgentModal({ isOpen, agent, onClose, onUpdated }: EditAgentM
               max={100}
               placeholder="Masukkan nilai Typing Test Score"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="afrt">AFRT</Label>
+              <Input
+                id="afrt"
+                type="number"
+                value={formData.afrt}
+                onChange={(e) => handleInputChange("afrt", e.target.value)}
+                min={0}
+                placeholder="Masukkan nilai AFRT"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="art">ART</Label>
+              <Input
+                id="art"
+                type="number"
+                value={formData.art}
+                onChange={(e) => handleInputChange("art", e.target.value)}
+                min={0}
+                placeholder="Masukkan nilai ART"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rt">RT</Label>
+              <Input
+                id="rt"
+                type="number"
+                value={formData.rt}
+                onChange={(e) => handleInputChange("rt", e.target.value)}
+                min={0}
+                placeholder="Masukkan nilai RT"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rr">RR</Label>
+              <Input
+                id="rr"
+                type="number"
+                value={formData.rr}
+                onChange={(e) => handleInputChange("rr", e.target.value)}
+                min={0}
+                placeholder="Masukkan nilai RR"
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="csat">CSAT</Label>
+              <Input
+                id="csat"
+                type="number"
+                value={formData.csat}
+                onChange={(e) => handleInputChange("csat", e.target.value)}
+                min={0}
+                max={100}
+                placeholder="Masukkan nilai CSAT"
+              />
+            </div>
           </div>
 
           {error && (

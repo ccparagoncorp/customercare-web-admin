@@ -45,6 +45,11 @@ interface Agent {
   qaScore?: number
   quizScore?: number
   typingTestScore?: number
+  afrt?: number
+  art?: number
+  rt?: number
+  rr?: number
+  csat?: number
   isActive?: boolean
   createdAt?: string
   updatedAt?: string
@@ -300,6 +305,21 @@ export function AgentsTable() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {table.headers.typingScore}
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    AFRT
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ART
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    RT
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    RR
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CSAT
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {table.headers.actions}
                   </th>
@@ -355,6 +375,21 @@ export function AgentsTable() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {renderScoreBadge(agent.typingTestScore)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.afrt)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.art)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.rt)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.rr)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderScoreBadge(agent.csat)}
                 </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
@@ -430,6 +465,11 @@ export function AgentsTable() {
                 qaScore: newAgent.qaScore ?? 0,
                 quizScore: newAgent.quizScore ?? 0,
                 typingTestScore: newAgent.typingTestScore ?? 0,
+                afrt: newAgent.afrt ?? 0,
+                art: newAgent.art ?? 0,
+                rt: newAgent.rt ?? 0,
+                rr: newAgent.rr ?? 0,
+                csat: newAgent.csat ?? 0,
                 isActive: newAgent.isActive ?? true
               }
               setAgents(prev => [agentWithDefaults, ...prev])
@@ -453,7 +493,12 @@ export function AgentsTable() {
               foto: updatedAgent.foto,
               qaScore: updatedAgent.qaScore,
               quizScore: updatedAgent.quizScore,
-              typingTestScore: updatedAgent.typingTestScore
+              typingTestScore: updatedAgent.typingTestScore,
+              afrt: updatedAgent.afrt,
+              art: updatedAgent.art,
+              rt: updatedAgent.rt,
+              rr: updatedAgent.rr,
+              csat: updatedAgent.csat
             } : agent))
             // Refresh data to ensure we have the latest performance record
             fetchAgents()

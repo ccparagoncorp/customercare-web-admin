@@ -16,6 +16,11 @@ interface Agent {
   qaScore?: number
   quizScore?: number
   typingTestScore?: number
+  afrt?: number
+  art?: number
+  rt?: number
+  rr?: number
+  csat?: number
   isActive?: boolean
   createdAt?: string
   updatedAt?: string

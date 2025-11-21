@@ -21,6 +21,11 @@ interface ScoreRow {
   qascore: number | string
   quizscore: number | string
   typingtestscore: number | string
+  afrt: number | string
+  art: number | string
+  rt: number | string
+  rr: number | string
+  csat: number | string
 }
 
 export async function POST(request: NextRequest) {
@@ -112,6 +117,21 @@ export async function POST(request: NextRequest) {
     const typingtestscoreIndex = headerRow.findIndex(h => 
       h === 'typingtestscore' || h === 'typing test score' || h === 'typing_test_score' || h === 'typingtest'
     )
+    const afrtIndex = headerRow.findIndex(h => 
+      h === 'afrt'
+    )
+    const artIndex = headerRow.findIndex(h => 
+      h === 'art'
+    )
+    const rtIndex = headerRow.findIndex(h => 
+      h === 'rt'
+    )
+    const rrIndex = headerRow.findIndex(h => 
+      h === 'rr'
+    )
+    const csatIndex = headerRow.findIndex(h => 
+      h === 'csat'
+    )
 
     if (namaIndex === -1) {
       return NextResponse.json(
@@ -120,9 +140,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (qascoreIndex === -1 && quizscoreIndex === -1 && typingtestscoreIndex === -1) {
+    const hasScoreColumn = [
+      qascoreIndex,
+      quizscoreIndex,
+      typingtestscoreIndex,
+      afrtIndex,
+      artIndex,
+      rtIndex,
+      rrIndex,
+      csatIndex
+    ].some(index => index !== -1)
+
+    if (!hasScoreColumn) {
       return NextResponse.json(
-        { message: 'Minimal satu kolom score (qascore, quizscore, atau typingtestscore) harus ada' },
+        { message: 'Minimal satu kolom nilai (qascore, quizscore, typingtestscore, afrt, art, rt, rr, atau csat) harus ada' },
         { status: 400 }
       )
     }
@@ -139,12 +170,22 @@ export async function POST(request: NextRequest) {
       const qascore = qascoreIndex !== -1 ? row[qascoreIndex] : null
       const quizscore = quizscoreIndex !== -1 ? row[quizscoreIndex] : null
       const typingtestscore = typingtestscoreIndex !== -1 ? row[typingtestscoreIndex] : null
+      const afrt = afrtIndex !== -1 ? row[afrtIndex] : null
+      const art = artIndex !== -1 ? row[artIndex] : null
+      const rt = rtIndex !== -1 ? row[rtIndex] : null
+      const rr = rrIndex !== -1 ? row[rrIndex] : null
+      const csat = csatIndex !== -1 ? row[csatIndex] : null
 
       rows.push({
         nama: typeof nama === 'string' ? nama.trim() : String(nama).trim(),
         qascore: qascore ?? 0,
         quizscore: quizscore ?? 0,
-        typingtestscore: typingtestscore ?? 0
+        typingtestscore: typingtestscore ?? 0,
+        afrt: afrt ?? 0,
+        art: art ?? 0,
+        rt: rt ?? 0,
+        rr: rr ?? 0,
+        csat: csat ?? 0
       })
     }
 
@@ -198,6 +239,11 @@ export async function POST(request: NextRequest) {
         const parsedQa = parseScore(row.qascore)
         const parsedQuiz = parseScore(row.quizscore)
         const parsedTyping = parseScore(row.typingtestscore)
+        const parsedAfrt = parseScore(row.afrt)
+        const parsedArt = parseScore(row.art)
+        const parsedRt = parseScore(row.rt)
+        const parsedRr = parseScore(row.rr)
+        const parsedCsat = parseScore(row.csat)
 
         // Check if performance exists in the same month
         const existingPerformance = await withRetry(async () => {
@@ -222,6 +268,11 @@ export async function POST(request: NextRequest) {
               qaScore: parsedQa,
               quizScore: parsedQuiz,
               typingTestScore: parsedTyping,
+              afrt: parsedAfrt,
+              art: parsedArt,
+              rt: parsedRt,
+              rr: parsedRr,
+              csat: parsedCsat,
               timestamp: now
             }
           }))
@@ -233,6 +284,11 @@ export async function POST(request: NextRequest) {
               qaScore: parsedQa,
               quizScore: parsedQuiz,
               typingTestScore: parsedTyping,
+              afrt: parsedAfrt,
+              art: parsedArt,
+              rt: parsedRt,
+              rr: parsedRr,
+              csat: parsedCsat,
               timestamp: now
             }
           }))
