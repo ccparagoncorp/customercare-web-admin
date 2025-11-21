@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     let workbook: XLSX.WorkBook
-    let rows: ScoreRow[] = []
+    const rows: ScoreRow[] = []
 
     // Handle file upload
     if (file) {
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
       header: 1,
       defval: null 
-    }) as any[][]
+    }) as (string | number | null | undefined)[][]
 
     if (jsonData.length < 2) {
       return NextResponse.json(
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find header row (case-insensitive)
-    const headerRow = jsonData[0].map((h: any) => 
+    const headerRow = jsonData[0].map((h: string | number | null | undefined) => 
       typeof h === 'string' ? h.toLowerCase().trim() : ''
     )
 
