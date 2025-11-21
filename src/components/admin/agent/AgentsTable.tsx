@@ -8,6 +8,7 @@ import { Plus, Search, Trash2, Eye, X, Pencil, Upload } from "lucide-react"
 import { AddAgentModal } from "./AddAgentModal"
 import { EditAgentModal } from "./EditAgentModal"
 import { UploadScoresModal } from "./UploadScoresModal"
+import { UploadAgentsModal } from "./UploadAgentsModal"
 import agentsContent from "@/content/agents.json"
 
 function AgentAvatar({ foto, name, fallbackInitials }: { foto: string; name: string; fallbackInitials: string }) {
@@ -57,6 +58,7 @@ export function AgentsTable() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showUploadAgentsModal, setShowUploadAgentsModal] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [pagination, setPagination] = useState({
     page: 1,
@@ -217,6 +219,14 @@ export function AgentsTable() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => setShowUploadAgentsModal(true)}
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Agent
+            </Button>
             <Button
               onClick={() => setShowUploadModal(true)}
               variant="outline"
@@ -454,6 +464,15 @@ export function AgentsTable() {
         <UploadScoresModal
           isOpen={showUploadModal}
           onClose={() => setShowUploadModal(false)}
+          onSuccess={() => {
+            fetchAgents() // Refresh agents list after successful upload
+          }}
+        />
+      )}
+      {showUploadAgentsModal && (
+        <UploadAgentsModal
+          isOpen={showUploadAgentsModal}
+          onClose={() => setShowUploadAgentsModal(false)}
           onSuccess={() => {
             fetchAgents() // Refresh agents list after successful upload
           }}
