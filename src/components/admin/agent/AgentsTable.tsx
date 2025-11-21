@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Trash2, Eye, X, Pencil } from "lucide-react"
+import { Plus, Search, Trash2, Eye, X, Pencil, Upload } from "lucide-react"
 import { AddAgentModal } from "./AddAgentModal"
 import { EditAgentModal } from "./EditAgentModal"
+import { UploadScoresModal } from "./UploadScoresModal"
 import agentsContent from "@/content/agents.json"
 
 function AgentAvatar({ foto, name, fallbackInitials }: { foto: string; name: string; fallbackInitials: string }) {
@@ -55,6 +56,7 @@ export function AgentsTable() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [pagination, setPagination] = useState({
     page: 1,
@@ -214,13 +216,23 @@ export function AgentsTable() {
               )}
             </div>
           </div>
-          <Button
-            onClick={() => setShowAddModal(true)}
-            className="bg-[#03438f] hover:bg-[#03438f]/90 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {addButton}
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              variant="outline"
+              className="border-[#03438f] text-[#03438f] hover:bg-[#03438f]/10"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Nilai
+            </Button>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="bg-[#03438f] hover:bg-[#03438f]/90 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {addButton}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -435,6 +447,15 @@ export function AgentsTable() {
             } : agent))
             // Refresh data to ensure we have the latest performance record
             fetchAgents()
+          }}
+        />
+      )}
+      {showUploadModal && (
+        <UploadScoresModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={() => {
+            fetchAgents() // Refresh agents list after successful upload
           }}
         />
       )}
