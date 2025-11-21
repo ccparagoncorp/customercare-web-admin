@@ -67,12 +67,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let workbook: XLSX.WorkBook
     const rows: AgentRow[] = []
 
     // Handle file upload
     const arrayBuffer = await file.arrayBuffer()
-    workbook = XLSX.read(arrayBuffer, { type: 'array' })
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' })
 
     // Read first sheet
     const sheetName = workbook.SheetNames[0]
