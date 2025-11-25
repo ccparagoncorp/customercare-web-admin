@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createPrismaClient, withRetry, withAuditUser } from '@/lib/prisma'
-import { normalizeEmptyStrings } from '@/lib/utils/normalize'
 import { uploadAnnouncementFileServer, deleteAnnouncementFilesServer } from '@/lib/supabase-storage'
+import { Prisma } from '@prisma/client'
 
 interface SessionUser {
   id: string
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     const prisma = createPrismaClient()
-    const where: any = {}
+    const where: Prisma.AnnouncementWhereInput = {}
 
     if (search) {
       where.OR = [
