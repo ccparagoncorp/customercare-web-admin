@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react"
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Download } from "lucide-react"
+import * as XLSX from "xlsx"
+import agentsContent from "@/content/agents.json"
 
 interface UploadAgentsModalProps {
   isOpen: boolean
@@ -27,6 +29,8 @@ export function UploadAgentsModal({ isOpen, onClose, onSuccess }: UploadAgentsMo
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<UploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+  const templateConfig = agentsContent.templateUploadAgents
 
   if (!isOpen) return null
 
@@ -88,6 +92,39 @@ export function UploadAgentsModal({ isOpen, onClose, onSuccess }: UploadAgentsMo
     }
   }
 
+  const handleDownloadTemplate = () => {
+    if (!templateConfig || !templateConfig.headers || templateConfig.headers.length === 0) {
+      setError('Template tidak tersedia saat ini.')
+      return
+    }
+
+    try {
+      setDownloadingTemplate(true)
+      setError(null)
+
+      const headers = templateConfig.headers as (string | number)[]
+      const worksheetData: (string | number)[][] = [headers]
+
+      if (
+        templateConfig.sampleRow &&
+        Array.isArray(templateConfig.sampleRow) &&
+        templateConfig.sampleRow.length === headers.length
+      ) {
+        worksheetData.push(templateConfig.sampleRow as (string | number)[])
+      }
+
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, templateConfig.sheetName || 'Agents')
+      XLSX.writeFile(workbook, templateConfig.fileName || 'template_upload_agent.xlsx')
+    } catch (err) {
+      console.error('Error generating template file:', err)
+      setError('Gagal membuat template. Silakan coba lagi.')
+    } finally {
+      setDownloadingTemplate(false)
+    }
+  }
+
   const handleClose = () => {
     setFile(null)
     setResult(null)
@@ -106,7 +143,9 @@ export function UploadAgentsModal({ isOpen, onClose, onSuccess }: UploadAgentsMo
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Upload Agent dari Excel</h2>
-              <p className="text-sm text-gray-500">Upload file Excel dengan kolom: Nama Lengkap, Email, Kategori, Password</p>
+              <p className="text-sm text-gray-500">
+                Upload file Excel dengan kolom wajib (Nama, Email, Kategori, Password) serta opsional NIP/TL/QA
+              </p>
             </div>
           </div>
           <button
@@ -163,17 +202,48 @@ export function UploadAgentsModal({ isOpen, onClose, onSuccess }: UploadAgentsMo
               </div>
 
               {/* Format Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                  Format File Excel:
-                </h3>
-                <div className="text-sm text-blue-800 space-y-1">
-                  <p>• Baris pertama harus berisi header: <strong>Nama Lengkap</strong>, <strong>Email</strong>, <strong>Kategori</strong>, <strong>Password</strong></p>
-                  <p>• Email harus unik dan valid</p>
-                  <p>• Password minimal 6 karakter</p>
-                  <p>• Kategori: <strong>socialMedia</strong> atau <strong>eCommerce</strong> (default: socialMedia)</p>
-                  <p>• Agent akan dibuat dengan status aktif</p>
-                  <p>• CreatedAt mengikuti waktu upload</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                    Format File Excel:
+                  </h3>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <p>• Header wajib: <strong>Nama Lengkap</strong>, <strong>Email</strong>, <strong>Kategori</strong>, <strong>Password</strong></p>
+                    <p>• Header opsional: <strong>NIP</strong>, <strong>TL</strong>, <strong>QA</strong> (boleh dikosongkan)</p>
+                    <p>• Email harus unik dan valid, password minimal 6 karakter</p>
+                    <p>• Kategori: <strong>socialMedia</strong> atau <strong>eCommerce</strong> (default: socialMedia)</p>
+                    <p>• Agent akan dibuat aktif dengan timestamp sesuai waktu upload</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (!templateConfig) {
+                        setError('Template tidak tersedia')
+                        return
+                      }
+                      handleDownloadTemplate()
+                    }}
+                    disabled={downloadingTemplate}
+                    className="flex items-center space-x-2"
+                  >
+                    {downloadingTemplate ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin" />
+                        <span>Mengunduh...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4" />
+                        <span>Download Template Excel</span>
+                      </>
+                    )}
+                  </Button>
+                  {templateConfig?.description && (
+                    <p className="text-xs text-blue-700">{templateConfig.description}</p>
+                  )}
                 </div>
               </div>
 

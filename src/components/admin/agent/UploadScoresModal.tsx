@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import * as XLSX from "xlsx"
+import agentsContent from "@/content/agents.json"
 import { Button } from "@/components/ui/button"
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react"
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Download } from "lucide-react"
 
 interface UploadScoresModalProps {
   isOpen: boolean
@@ -29,6 +31,9 @@ export function UploadScoresModal({ isOpen, onClose, onSuccess }: UploadScoresMo
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<UploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+
+  const templateConfig = agentsContent.templateFileExcel
 
   if (!isOpen) return null
 
@@ -90,6 +95,40 @@ export function UploadScoresModal({ isOpen, onClose, onSuccess }: UploadScoresMo
     }
   }
 
+  const handleDownloadTemplate = () => {
+    try {
+      if (!templateConfig || !templateConfig.headers || templateConfig.headers.length === 0) {
+        setError("Template belum tersedia.")
+        return
+      }
+      setDownloadingTemplate(true)
+      setError(null)
+
+      const headers = templateConfig.headers as (string | number)[]
+      const sheetName = templateConfig.sheetName || "Template"
+      const fileName = templateConfig.fileName || "template_nilai_agent.xlsx"
+      const worksheetData: (string | number)[][] = [headers]
+
+      if (
+        templateConfig.sampleRow &&
+        Array.isArray(templateConfig.sampleRow) &&
+        templateConfig.sampleRow.length === headers.length
+      ) {
+        worksheetData.push(templateConfig.sampleRow as (string | number)[])
+      }
+
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+      XLSX.writeFile(workbook, fileName)
+    } catch (err) {
+      console.error("Error generating template file:", err)
+      setError("Gagal membuat template file. Silakan coba lagi.")
+    } finally {
+      setDownloadingTemplate(false)
+    }
+  }
+
   const handleClose = () => {
     setFile(null)
     setResult(null)
@@ -108,7 +147,9 @@ export function UploadScoresModal({ isOpen, onClose, onSuccess }: UploadScoresMo
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Upload Nilai dari Excel</h2>
-              <p className="text-sm text-gray-500">Upload file Excel dengan kolom: nama, qascore, quizscore, typingtestscore</p>
+              <p className="text-sm text-gray-500">
+                Upload file Excel dengan kolom nilai dan remarks untuk setiap metrik
+              </p>
             </div>
           </div>
           <button
@@ -165,18 +206,49 @@ export function UploadScoresModal({ isOpen, onClose, onSuccess }: UploadScoresMo
               </div>
 
               {/* Format Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                  Format File Excel:
-                </h3>
-                <div className="text-sm text-blue-800 space-y-1">
-                  <p>• Baris pertama harus berisi header: <strong>nama</strong>, <strong>qascore</strong>, <strong>quizscore</strong>, <strong>typingtestscore</strong>, <strong>afrt</strong>, <strong>art</strong>, <strong>rt</strong>, <strong>rr</strong>, <strong>csat</strong></p>
-                  <p>• Nama harus sesuai dengan nama agent di database (case-insensitive)</p>
-                  <p>• Kolom score bersifat opsional (jika tidak ada akan diisi 0)</p>
-                  <p>• Nilai akan di-update untuk bulan saat ini</p>
-                  <p>• Jika sudah ada data di bulan yang sama, data lama akan di-replace</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                    Format File Excel:
+                  </h3>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <p>• Baris pertama harus berisi header lengkap sesuai template (nilai + remarks)</p>
+                    <p>• Nama harus sesuai dengan nama agent di database (case-insensitive)</p>
+                    <p>• Kolom nilai bersifat opsional (jika tidak ada akan diisi 0)</p>
+                    <p>• Kolom remarks bersifat opsional untuk mencatat catatan setiap nilai</p>
+                    <p>• Nilai akan di-update untuk bulan saat ini</p>
+                    <p>• Jika sudah ada data di bulan yang sama, data lama akan di-replace</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDownloadTemplate}
+                    disabled={downloadingTemplate}
+                    className="flex items-center space-x-2"
+                  >
+                    {downloadingTemplate ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-[#03438f]/30 border-t-[#03438f] rounded-full animate-spin" />
+                        <span>Mengunduh...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4" />
+                        <span>Download Template Excel</span>
+                      </>
+                    )}
+                  </Button>
+                  {templateConfig?.description && (
+                    <p className="text-xs text-blue-700">
+                      {templateConfig.description}
+                    </p>
+                  )}
                 </div>
               </div>
+
+              
 
               {/* Error Message */}
               {error && (

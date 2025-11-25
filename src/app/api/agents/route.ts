@@ -64,6 +64,9 @@ export async function POST(request: NextRequest) {
       email?: string
       password?: string
       category?: string
+      nip?: string | null
+      tl?: string | null
+      qa?: string | null
       qaScore?: number | string
       quizScore?: number | string
       typingTestScore?: number | string
@@ -80,6 +83,9 @@ export async function POST(request: NextRequest) {
         email: formData.get('email') as string | undefined,
         password: formData.get('password') as string | undefined,
         category: (formData.get('category') as string | undefined) || 'socialMedia',
+        nip: formData.get('nip') as string | undefined,
+        tl: formData.get('tl') as string | undefined,
+        qa: formData.get('qa') as string | undefined,
         qaScore: formData.get('qaScore') as string | undefined,
         quizScore: formData.get('quizScore') as string | undefined,
         typingTestScore: formData.get('typingTestScore') as string | undefined,
@@ -107,6 +113,9 @@ export async function POST(request: NextRequest) {
         email?: string
         password?: string
         category?: string
+        nip?: string | null
+        tl?: string | null
+        qa?: string | null
         qaScore?: number
         quizScore?: number
         typingTestScore?: number
@@ -120,6 +129,9 @@ export async function POST(request: NextRequest) {
       email,
       password,
       category = 'socialMedia',
+      nip = null,
+      tl = null,
+      qa = null,
       qaScore = 0,
       quizScore = 0,
       typingTestScore = 0
@@ -230,6 +242,9 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password: hashedPassword, // Store hashed password
+        nip: nip ? nip.trim() : null,
+        tl: tl ? tl.trim() : null,
+        qa: qa ? qa.trim() : null,
         foto: fotoUrl,
         category: category,
         isActive: true
@@ -257,6 +272,9 @@ export async function POST(request: NextRequest) {
           id: newAgent.id,
           name: newAgent.name,
           email: newAgent.email,
+          nip: newAgent.nip,
+          tl: newAgent.tl,
+          qa: newAgent.qa,
           foto: newAgent.foto,
           category: newAgent.category,
           qaScore: parsedQaScore,
@@ -338,6 +356,9 @@ export async function GET(request: NextRequest) {
           id: true,
           name: true,
           email: true,
+          nip: true,
+          tl: true,
+          qa: true,
           foto: true,
           category: true,
           isActive: true,
@@ -400,6 +421,9 @@ export async function GET(request: NextRequest) {
       const performance = performancesMap.get(agent.id)
       return {
         ...agent,
+        nip: agent.nip,
+        tl: agent.tl,
+        qa: agent.qa,
         foto: agent.foto,
         qaScore: performance?.qaScore ?? 0,
         quizScore: performance?.quizScore ?? 0,
@@ -456,6 +480,9 @@ export async function PATCH(request: NextRequest) {
     // Handle both JSON and FormData
     type UpdateAgentBody = {
       id?: string
+      nip?: string | null
+      tl?: string | null
+      qa?: string | null
       qaScore?: number | string
       quizScore?: number | string
       typingTestScore?: number | string
@@ -477,6 +504,9 @@ export async function PATCH(request: NextRequest) {
       body = {
         id: formData.get('id') as string | undefined,
         qaScore: formData.get('qaScore') as string | undefined,
+        nip: formData.get('nip') as string | undefined,
+        tl: formData.get('tl') as string | undefined,
+        qa: formData.get('qa') as string | undefined,
         quizScore: formData.get('quizScore') as string | undefined,
         typingTestScore: formData.get('typingTestScore') as string | undefined,
         afrt: formData.get('afrt') as string | undefined,
@@ -492,6 +522,9 @@ export async function PATCH(request: NextRequest) {
       body = normalizeEmptyStrings(await request.json()) as {
         id?: string
         qaScore?: number
+        nip?: string | null
+        tl?: string | null
+        qa?: string | null
         quizScore?: number
         typingTestScore?: number
         afrt?: number
@@ -508,6 +541,9 @@ export async function PATCH(request: NextRequest) {
     const {
       id,
       qaScore,
+      nip,
+      tl,
+      qa,
       quizScore,
       typingTestScore,
       afrt,
@@ -603,6 +639,9 @@ export async function PATCH(request: NextRequest) {
       category?: string
       isActive?: boolean
       foto?: string | null
+      nip?: string | null
+      tl?: string | null
+      qa?: string | null
     } = {}
 
     if (category) updateAgentData.category = category
@@ -618,6 +657,9 @@ export async function PATCH(request: NextRequest) {
       }
       updateAgentData.foto = fotoUrl
     }
+    if (nip !== undefined) updateAgentData.nip = nip ? nip.trim() : null
+    if (tl !== undefined) updateAgentData.tl = tl ? tl.trim() : null
+    if (qa !== undefined) updateAgentData.qa = qa ? qa.trim() : null
 
     // Handle score updates - create or update Performance record
     const hasScoreUpdate =
@@ -699,6 +741,9 @@ export async function PATCH(request: NextRequest) {
       id: string
       name: string
       email: string
+      nip: string | null
+      tl: string | null
+      qa: string | null
       foto: string | null
       category: string
       isActive: boolean
@@ -708,6 +753,9 @@ export async function PATCH(request: NextRequest) {
       id: existingAgent.id,
       name: existingAgent.name,
       email: existingAgent.email,
+      nip: existingAgent.nip,
+      tl: existingAgent.tl,
+      qa: existingAgent.qa,
       foto: existingAgent.foto,
       category: existingAgent.category,
       isActive: existingAgent.isActive,
@@ -723,6 +771,9 @@ export async function PATCH(request: NextRequest) {
           id: true,
           name: true,
           email: true,
+          nip: true,
+          tl: true,
+          qa: true,
           foto: true,
           category: true,
           isActive: true,

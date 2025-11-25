@@ -177,6 +177,9 @@ model Agent {
   name      String
   email     String   @unique
   password  String
+  nip       String?
+  tl        String?
+  qa        String?
   foto      String?  // URL foto dari Supabase bucket foto_agent
   category  String   @default("socialMedia")
   isActive  Boolean  @default(true)
@@ -196,13 +199,21 @@ model Performance {
   id             String   @id @default(cuid())
   agentId        String   @map("agent_id")
   qaScore        Int      @default(0) @map("qa_score")
+  qaScoreRemarks String?
   quizScore      Int      @default(0) @map("quiz_score")
+  quizScoreRemarks String?
   typingTestScore Int     @default(0) @map("typing_test_score")
+  typingTestScoreRemarks String?
   afrt           Int      @default(0)
+  afrtRemarks    String?
   art            Int      @default(0)
+  artRemarks     String?
   rt             Int      @default(0)
+  rtRemarks      String?
   rr             Int      @default(0)
+  rrRemarks      String?
   csat           Int      @default(0)
+  csatRemarks    String?
   timestamp      DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

@@ -11,6 +11,9 @@ interface Agent {
   id: string
   name: string
   email: string
+  nip?: string | null
+  tl?: string | null
+  qa?: string | null
   role?: string
   category: string
   qaScore?: number
@@ -36,6 +39,9 @@ export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    nip: "",
+    tl: "",
+    qa: "",
     password: "",
     confirmPassword: "",
     category: "socialMedia"
@@ -92,6 +98,9 @@ export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps
           email: formData.email.trim(),
           password: formData.password,
           role: 'AGENT',
+        nip: formData.nip.trim() || null,
+        tl: formData.tl.trim() || null,
+        qa: formData.qa.trim() || null,
           category: formData.category
         }),
       })
@@ -129,6 +138,9 @@ export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps
     setFormData({
       name: "",
       email: "",
+      nip: "",
+      tl: "",
+      qa: "",
       password: "",
       confirmPassword: "",
       category: "socialMedia"
@@ -200,6 +212,46 @@ export function AddAgentModal({ isOpen, onClose, onSuccess }: AddAgentModalProps
             {errors.email && (
               <p className="text-sm text-red-600">{errors.email}</p>
             )}
+          </div>
+
+          {/* Additional Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="nip" className="text-sm font-medium text-gray-700">
+                NIP
+              </Label>
+              <Input
+                id="nip"
+                type="text"
+                value={formData.nip}
+                onChange={(e) => handleInputChange('nip', e.target.value)}
+                placeholder="Masukkan NIP"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tl" className="text-sm font-medium text-gray-700">
+                TL
+              </Label>
+              <Input
+                id="tl"
+                type="text"
+                value={formData.tl}
+                onChange={(e) => handleInputChange('tl', e.target.value)}
+                placeholder="Masukkan nama TL"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="qa" className="text-sm font-medium text-gray-700">
+                QA
+              </Label>
+              <Input
+                id="qa"
+                type="text"
+                value={formData.qa}
+                onChange={(e) => handleInputChange('qa', e.target.value)}
+                placeholder="Masukkan nama QA"
+              />
+            </div>
           </div>
 
           {/* Category Field */}

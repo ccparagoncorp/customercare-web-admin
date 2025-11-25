@@ -23,6 +23,9 @@ interface AgentRow {
   email: string
   kategori: string
   password: string
+  nip?: string | null
+  tl?: string | null
+  qa?: string | null
 }
 
 // Supabase client for auth operations
@@ -95,18 +98,17 @@ export async function POST(request: NextRequest) {
       typeof h === 'string' ? h.toLowerCase().trim() : ''
     )
 
-    const namaIndex = headerRow.findIndex(h => 
-      h === 'nama lengkap' || h === 'nama' || h === 'name'
-    )
-    const emailIndex = headerRow.findIndex(h => 
-      h === 'email'
-    )
-    const kategoriIndex = headerRow.findIndex(h => 
-      h === 'kategori' || h === 'category'
-    )
-    const passwordIndex = headerRow.findIndex(h => 
-      h === 'password'
-    )
+    const normalizeHeader = (value: string) => value.replace(/[\s_]/g, '')
+    const findHeaderIndex = (patterns: string[]) =>
+      headerRow.findIndex(h => patterns.some(pattern => normalizeHeader(h) === normalizeHeader(pattern.toLowerCase())))
+
+    const namaIndex = findHeaderIndex(['nama lengkap', 'nama', 'name'])
+    const emailIndex = findHeaderIndex(['email'])
+    const kategoriIndex = findHeaderIndex(['kategori', 'category'])
+    const passwordIndex = findHeaderIndex(['password'])
+    const nipIndex = findHeaderIndex(['nip'])
+    const tlIndex = findHeaderIndex(['tl', 'team leader'])
+    const qaIndex = findHeaderIndex(['qa'])
 
     if (namaIndex === -1) {
       return NextResponse.json(
@@ -136,6 +138,9 @@ export async function POST(request: NextRequest) {
       const email = row[emailIndex]
       const kategori = kategoriIndex !== -1 ? row[kategoriIndex] : null
       const password = row[passwordIndex]
+      const nipValue = nipIndex !== -1 ? row[nipIndex] : null
+      const tlValue = tlIndex !== -1 ? row[tlIndex] : null
+      const qaValue = qaIndex !== -1 ? row[qaIndex] : null
       
       if (!namaLengkap || (typeof namaLengkap === 'string' && namaLengkap.trim() === '')) {
         continue // Skip empty rows
@@ -153,7 +158,10 @@ export async function POST(request: NextRequest) {
         namaLengkap: typeof namaLengkap === 'string' ? namaLengkap.trim() : String(namaLengkap).trim(),
         email: typeof email === 'string' ? email.trim() : String(email).trim(),
         kategori: kategori ? (typeof kategori === 'string' ? kategori.trim() : String(kategori).trim()) : 'socialMedia',
-        password: typeof password === 'string' ? password.trim() : String(password).trim()
+        password: typeof password === 'string' ? password.trim() : String(password).trim(),
+        nip: nipValue ? (typeof nipValue === 'string' ? nipValue.trim() : String(nipValue).trim()) : null,
+        tl: tlValue ? (typeof tlValue === 'string' ? tlValue.trim() : String(tlValue).trim()) : null,
+        qa: qaValue ? (typeof qaValue === 'string' ? qaValue.trim() : String(qaValue).trim()) : null
       })
     }
 
@@ -260,6 +268,9 @@ export async function POST(request: NextRequest) {
             name: row.namaLengkap,
             email: emailLower,
             password: hashedPassword,
+            nip: row.nip || null,
+            tl: row.tl || null,
+            qa: row.qa || null,
             category: category,
             isActive: true,
             createdAt: uploadTimestamp // Use upload timestamp

@@ -26,6 +26,14 @@ interface ScoreRow {
   rt: number | string
   rr: number | string
   csat: number | string
+  qaScoreRemarks: string | null
+  quizScoreRemarks: string | null
+  typingTestScoreRemarks: string | null
+  afrtRemarks: string | null
+  artRemarks: string | null
+  rtRemarks: string | null
+  rrRemarks: string | null
+  csatRemarks: string | null
 }
 
 export async function POST(request: NextRequest) {
@@ -105,33 +113,28 @@ export async function POST(request: NextRequest) {
       typeof h === 'string' ? h.toLowerCase().trim() : ''
     )
 
-    const namaIndex = headerRow.findIndex(h => 
-      h === 'nama' || h === 'name'
-    )
-    const qascoreIndex = headerRow.findIndex(h => 
-      h === 'qascore' || h === 'qa score' || h === 'qa_score'
-    )
-    const quizscoreIndex = headerRow.findIndex(h => 
-      h === 'quizscore' || h === 'quiz score' || h === 'quiz_score'
-    )
-    const typingtestscoreIndex = headerRow.findIndex(h => 
-      h === 'typingtestscore' || h === 'typing test score' || h === 'typing_test_score' || h === 'typingtest'
-    )
-    const afrtIndex = headerRow.findIndex(h => 
-      h === 'afrt'
-    )
-    const artIndex = headerRow.findIndex(h => 
-      h === 'art'
-    )
-    const rtIndex = headerRow.findIndex(h => 
-      h === 'rt'
-    )
-    const rrIndex = headerRow.findIndex(h => 
-      h === 'rr'
-    )
-    const csatIndex = headerRow.findIndex(h => 
-      h === 'csat'
-    )
+    const normalizeHeader = (value: string) => value.replace(/[\s_]/g, '')
+    const findHeaderIndex = (patterns: string[]) =>
+      headerRow.findIndex(h => patterns.some(pattern => normalizeHeader(h) === normalizeHeader(pattern.toLowerCase())))
+
+    const namaIndex = findHeaderIndex(['nama', 'name'])
+    const qascoreIndex = findHeaderIndex(['qascore', 'qa score', 'qa_score'])
+    const quizscoreIndex = findHeaderIndex(['quizscore', 'quiz score', 'quiz_score'])
+    const typingtestscoreIndex = findHeaderIndex(['typingtestscore', 'typing test score', 'typing_test_score', 'typingtest'])
+    const afrtIndex = findHeaderIndex(['afrt'])
+    const artIndex = findHeaderIndex(['art'])
+    const rtIndex = findHeaderIndex(['rt'])
+    const rrIndex = findHeaderIndex(['rr'])
+    const csatIndex = findHeaderIndex(['csat'])
+
+    const qaRemarksIndex = findHeaderIndex(['remarks qascore', 'qascore remarks', 'remarks_qascore', 'qascore_remarks'])
+    const quizRemarksIndex = findHeaderIndex(['remarks quizscore', 'quizscore remarks', 'remarks_quizscore', 'quizscore_remarks'])
+    const typingRemarksIndex = findHeaderIndex(['remarks typingtestscore', 'typingtestscore remarks', 'remarks_typingtestscore', 'typingtestscore_remarks'])
+    const afrtRemarksIndex = findHeaderIndex(['remarks afrt', 'afrt remarks', 'remarks_afrt'])
+    const artRemarksIndex = findHeaderIndex(['remarks art', 'art remarks', 'remarks_art'])
+    const rtRemarksIndex = findHeaderIndex(['remarks rt', 'rt remarks', 'remarks_rt'])
+    const rrRemarksIndex = findHeaderIndex(['remarks rr', 'rr remarks', 'remarks_rr'])
+    const csatRemarksIndex = findHeaderIndex(['remarks csat', 'csat remarks', 'remarks_csat'])
 
     if (namaIndex === -1) {
       return NextResponse.json(
@@ -158,6 +161,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const parseRemarkValue = (value: unknown): string | null => {
+      if (value === null || value === undefined) return null
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed.length > 0 ? trimmed : null
+      }
+      const strValue = String(value).trim()
+      return strValue.length > 0 ? strValue : null
+    }
+
     // Parse data rows
     for (let i = 1; i < jsonData.length; i++) {
       const row = jsonData[i]
@@ -175,6 +188,14 @@ export async function POST(request: NextRequest) {
       const rt = rtIndex !== -1 ? row[rtIndex] : null
       const rr = rrIndex !== -1 ? row[rrIndex] : null
       const csat = csatIndex !== -1 ? row[csatIndex] : null
+      const qaRemarksRaw = qaRemarksIndex !== -1 ? row[qaRemarksIndex] : null
+      const quizRemarksRaw = quizRemarksIndex !== -1 ? row[quizRemarksIndex] : null
+      const typingRemarksRaw = typingRemarksIndex !== -1 ? row[typingRemarksIndex] : null
+      const afrtRemarksRaw = afrtRemarksIndex !== -1 ? row[afrtRemarksIndex] : null
+      const artRemarksRaw = artRemarksIndex !== -1 ? row[artRemarksIndex] : null
+      const rtRemarksRaw = rtRemarksIndex !== -1 ? row[rtRemarksIndex] : null
+      const rrRemarksRaw = rrRemarksIndex !== -1 ? row[rrRemarksIndex] : null
+      const csatRemarksRaw = csatRemarksIndex !== -1 ? row[csatRemarksIndex] : null
 
       rows.push({
         nama: typeof nama === 'string' ? nama.trim() : String(nama).trim(),
@@ -185,7 +206,15 @@ export async function POST(request: NextRequest) {
         art: art ?? 0,
         rt: rt ?? 0,
         rr: rr ?? 0,
-        csat: csat ?? 0
+        csat: csat ?? 0,
+        qaScoreRemarks: parseRemarkValue(qaRemarksRaw),
+        quizScoreRemarks: parseRemarkValue(quizRemarksRaw),
+        typingTestScoreRemarks: parseRemarkValue(typingRemarksRaw),
+        afrtRemarks: parseRemarkValue(afrtRemarksRaw),
+        artRemarks: parseRemarkValue(artRemarksRaw),
+        rtRemarks: parseRemarkValue(rtRemarksRaw),
+        rrRemarks: parseRemarkValue(rrRemarksRaw),
+        csatRemarks: parseRemarkValue(csatRemarksRaw)
       })
     }
 
@@ -266,13 +295,21 @@ export async function POST(request: NextRequest) {
             where: { id: existingPerformance },
             data: {
               qaScore: parsedQa,
+              qaScoreRemarks: row.qaScoreRemarks,
               quizScore: parsedQuiz,
+              quizScoreRemarks: row.quizScoreRemarks,
               typingTestScore: parsedTyping,
+              typingTestScoreRemarks: row.typingTestScoreRemarks,
               afrt: parsedAfrt,
+              afrtRemarks: row.afrtRemarks,
               art: parsedArt,
+              artRemarks: row.artRemarks,
               rt: parsedRt,
+              rtRemarks: row.rtRemarks,
               rr: parsedRr,
+              rrRemarks: row.rrRemarks,
               csat: parsedCsat,
+              csatRemarks: row.csatRemarks,
               timestamp: now
             }
           }))
@@ -282,13 +319,21 @@ export async function POST(request: NextRequest) {
             data: {
               agentId: agentId,
               qaScore: parsedQa,
+              qaScoreRemarks: row.qaScoreRemarks,
               quizScore: parsedQuiz,
+              quizScoreRemarks: row.quizScoreRemarks,
               typingTestScore: parsedTyping,
+              typingTestScoreRemarks: row.typingTestScoreRemarks,
               afrt: parsedAfrt,
+              afrtRemarks: row.afrtRemarks,
               art: parsedArt,
+              artRemarks: row.artRemarks,
               rt: parsedRt,
+              rtRemarks: row.rtRemarks,
               rr: parsedRr,
+              rrRemarks: row.rrRemarks,
               csat: parsedCsat,
+              csatRemarks: row.csatRemarks,
               timestamp: now
             }
           }))

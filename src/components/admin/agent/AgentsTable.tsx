@@ -39,6 +39,9 @@ interface Agent {
   id: string
   name: string
   email: string
+  nip?: string | null
+  tl?: string | null
+  qa?: string | null
   foto?: string | null
   role?: string
   category: string

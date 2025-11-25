@@ -34,6 +34,72 @@
     "quizAverage": "Rata-rata Quiz Score",
     "typingAverage": "Rata-rata Typing Test"
   },
+  "templateFileExcel": {
+    "fileName": "template_nilai_agent.xlsx",
+    "sheetName": "Nilai Agent",
+    "headers": [
+      "nama",
+      "qascore",
+      "quizscore",
+      "typingtestscore",
+      "afrt",
+      "art",
+      "rt",
+      "rr",
+      "csat",
+      "remarks_qascore",
+      "remarks_quizscore",
+      "remarks_typingtestscore",
+      "remarks_afrt",
+      "remarks_art",
+      "remarks_rt",
+      "remarks_rr",
+      "remarks_csat"
+    ],
+    "sampleRow": [
+      "Contoh Agent",
+      95,
+      90,
+      80,
+      15,
+      20,
+      30,
+      5,
+      88,
+      "Catatan QA",
+      "Catatan Quiz",
+      "Catatan Typing",
+      "Catatan AFRT",
+      "Catatan ART",
+      "Catatan RT",
+      "Catatan RR",
+      "Catatan CSAT"
+    ],
+    "description": "Gunakan template ini untuk mengisi nilai agent, termasuk kolom remarks opsional untuk setiap metrik."
+  },
+  "templateUploadAgents": {
+    "fileName": "template_upload_agent.xlsx",
+    "sheetName": "Agents",
+    "headers": [
+      "Nama Lengkap",
+      "Email",
+      "Kategori",
+      "Password",
+      "NIP",
+      "TL",
+      "QA"
+    ],
+    "sampleRow": [
+      "Budi Santoso",
+      "budi.santoso@paragon.com",
+      "socialMedia",
+      "password123",
+      "123456789",
+      "Rina Andika",
+      "Agus Pratama"
+    ],
+    "description": "Kolom NIP, TL, dan QA bersifat opsional. Kosongkan saja jika tidak diperlukan."
+  },
   "categories": {
     "socialMedia": "Social Media",
     "eCommerce": "E-Commerce"
