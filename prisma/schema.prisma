@@ -373,3 +373,19 @@ model TracerUpdate {
   @@index([qualityTrainingId])
   @@map("tracer_updates")
 }
+
+model Announcement {
+  id          String   @id @default(cuid())
+  judul       String
+  deskripsi   String?
+  link        String?
+  image       String[]
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([judul])
+  @@index([createdAt])
+  @@map("announcements")
+}

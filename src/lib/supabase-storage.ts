@@ -9,6 +9,7 @@ const sopBucketName = process.env.SOP_BUCKET_NAME || 'sop'
 // Use ONE client-exposed env for QT uploads (browser needs access)
 const qtBucketName = process.env.NEXT_PUBLIC_QT_BUCKET_NAME || 'quality-training'
 const agentPhotoBucketName = 'foto_agent'
+const announcementBucketName = 'announcement'
 
 // Client-side supabase (anon)
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -477,5 +478,92 @@ export async function deleteAgentPhotoServer(pathOrUrl: string): Promise<{ succe
   } catch (e) {
     console.error('Agent photo delete (server) unexpected error:', e)
     return { success: false, error: 'Failed to delete agent photo (server)' }
+  }
+}
+
+// Announcement-specific upload functions
+export async function uploadAnnouncementFile(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    // Use server-side upload to bypass RLS
+    return await uploadAnnouncementFileServer(file, path)
+  } catch (error) {
+    console.error('Announcement upload error:', error)
+    return { url: null, error: 'Failed to upload announcement file' }
+  }
+}
+
+// Server-only announcement upload
+export async function uploadAnnouncementFileServer(file: File, path: string): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 15)
+    const fileExtension = file.name.split('.').pop()
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`
+    const fullPath = `${path}/${fileName}`
+
+    const { error } = await retry(() => serverSupabase.storage
+      .from(announcementBucketName)
+      .upload(fullPath, file, { cacheControl: '3600', upsert: false }), 3, 2000)
+
+    if (error) {
+      console.error('Announcement upload (server) error:', error)
+      return { url: null, error: error.message }
+    }
+
+    const { data: urlData } = serverSupabase.storage
+      .from(announcementBucketName)
+      .getPublicUrl(fullPath)
+
+    return { url: urlData.publicUrl, error: null }
+  } catch (error) {
+    console.error('Announcement upload (server) error:', error)
+    return { url: null, error: 'Failed to upload announcement file (server)' }
+  }
+}
+
+// Server-only announcement delete
+export async function deleteAnnouncementFileServer(pathOrUrl: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const path = pathOrUrl.startsWith('http') ? extractPathFromPublicUrl(pathOrUrl) : pathOrUrl
+    if (!path) {
+      return { success: false, error: 'Invalid announcement storage path or URL' }
+    }
+    const { error } = await serverSupabase.storage
+      .from(announcementBucketName)
+      .remove([path])
+    if (error) {
+      console.error('Announcement delete (server) error:', error)
+      return { success: false, error: error.message }
+    }
+    return { success: true, error: null }
+  } catch (e) {
+    console.error('Announcement delete (server) unexpected error:', e)
+    return { success: false, error: 'Failed to delete announcement file (server)' }
+  }
+}
+
+// Server-only batch delete for announcement files
+export async function deleteAnnouncementFilesServer(pathsOrUrls: string[]): Promise<{ success: boolean; error: string | null; deleted: number }> {
+  try {
+    const serverSupabase = getServerSupabase()
+    const paths: string[] = []
+    for (const item of pathsOrUrls) {
+      const p = item.startsWith('http') ? extractPathFromPublicUrl(item) : item
+      if (p) paths.push(p)
+    }
+    if (paths.length === 0) {
+      return { success: false, error: 'No valid storage paths to delete', deleted: 0 }
+    }
+    const { error } = await serverSupabase.storage.from(announcementBucketName).remove(paths)
+    if (error) {
+      console.error('Announcement batch delete (server) error:', error)
+      return { success: false, error: error.message, deleted: 0 }
+    }
+    return { success: true, error: null, deleted: paths.length }
+  } catch (e) {
+    console.error('Announcement batch delete (server) unexpected error:', e)
+    return { success: false, error: 'Failed to delete announcement files (server)', deleted: 0 }
   }
 }

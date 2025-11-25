@@ -36,6 +36,13 @@
         "inactive": "/sidebar/quality&training.png"
       }
     },
+    "announcement": {
+      "label": "Announcement",
+      "icon": {
+        "active": "/sidebar/announcementwhite.png",
+        "inactive": "/sidebar/announcement.png"
+      }
+    },
     "feedbackImprovement": {
       "label": "Feedback Improvement",
       "icon": {

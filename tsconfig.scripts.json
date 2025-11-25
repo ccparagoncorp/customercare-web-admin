@@ -3,8 +3,17 @@
   "compilerOptions": {
     "module": "CommonJS",
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
-  "include": ["scripts/**/*.ts", "prisma/**/*.ts"]
+  "include": ["scripts/**/*.ts", "prisma/**/*.ts"],
+  "ts-node": {
+    "esm": false,
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }
 }
 

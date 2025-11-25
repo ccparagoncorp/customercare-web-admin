@@ -60,29 +60,55 @@ async function setupAuditTriggers() {
     }
     const sqlScript = fs.readFileSync(sqlFilePath, 'utf-8')
 
-    console.log('📝 Creating audit trigger function...')
-    // Execute DROP statement first (if exists)
-    try {
-      await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS audit_trigger_function() CASCADE;')
-    } catch (error) {
-      // Ignore errors for DROP
-      console.log('  (Drop function - ok if not exists)')
+    console.log('📝 Creating audit trigger functions...')
+    
+    // Remove comments
+    const cleanSQL = sqlScript.replace(/^--.*$/gm, '').trim()
+    
+    // Split SQL into function definitions
+    // Each function starts with "CREATE OR REPLACE FUNCTION" and ends with "$$ LANGUAGE plpgsql;"
+    const functionPattern = /CREATE OR REPLACE FUNCTION[\s\S]*?\$\$ LANGUAGE plpgsql;/gi
+    const functions = cleanSQL.match(functionPattern) || []
+    
+    // Also get DROP statements
+    const dropPattern = /DROP FUNCTION IF EXISTS[^;]+CASCADE;/gi
+    const dropStatements = cleanSQL.match(dropPattern) || []
+    
+    // Execute DROP statements first
+    for (const dropStatement of dropStatements) {
+      try {
+        await prisma.$executeRawUnsafe(dropStatement.trim())
+        const functionMatch = dropStatement.match(/FUNCTION IF EXISTS\s+(\w+)/i)
+        if (functionMatch) {
+          console.log(`  🗑️  Dropped function: ${functionMatch[1]}()`)
+        }
+      } catch (error) {
+        // Ignore errors for DROP (function might not exist)
+        console.log(`  ℹ️  Drop function (ok if not exists)`)
+      }
     }
     
-    // Execute CREATE FUNCTION as single statement
-    // Remove comments and execute the function definition
-    const functionSQL = sqlScript
-      .replace(/^--.*$/gm, '') // Remove comment lines
-      .replace(/DROP FUNCTION IF EXISTS.*?CASCADE;/i, '') // Remove DROP statement (already executed)
-      .trim()
-    
-    try {
-      await prisma.$executeRawUnsafe(functionSQL)
-      console.log('✅ Audit trigger function created successfully\n')
-    } catch (error) {
-      console.error('❌ Error creating function:', error)
-      throw error
+    // Execute each function definition separately
+    for (const functionSQL of functions) {
+      const trimmed = functionSQL.trim()
+      if (!trimmed) continue
+      
+      try {
+        await prisma.$executeRawUnsafe(trimmed)
+        
+        // Extract function name
+        const functionMatch = trimmed.match(/FUNCTION\s+(\w+)/i)
+        if (functionMatch) {
+          console.log(`  ✅ Created function: ${functionMatch[1]}()`)
+        }
+      } catch (error) {
+        console.error(`  ❌ Error creating function:`, error)
+        console.error(`  Function SQL (first 200 chars): ${trimmed.substring(0, 200)}...`)
+        throw error
+      }
     }
+    
+    console.log('✅ All audit trigger functions created successfully\n')
 
     // 2. Buat trigger untuk setiap tabel
     console.log('🔧 Creating triggers for tables...\n')

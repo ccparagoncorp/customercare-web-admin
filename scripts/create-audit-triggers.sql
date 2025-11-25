@@ -9,6 +9,7 @@
 -- Hapus fungsi jika sudah ada (untuk update)
 DROP FUNCTION IF EXISTS audit_trigger_function() CASCADE;
 DROP FUNCTION IF EXISTS resolve_related_ids(text, jsonb) CASCADE;
+DROP FUNCTION IF EXISTS get_parent_table_info(text, jsonb) CASCADE;
 
 -- Fungsi helper untuk resolve related IDs berdasarkan tabel
 CREATE OR REPLACE FUNCTION resolve_related_ids(
@@ -214,6 +215,73 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Fungsi helper untuk mendapatkan parent table dan key berdasarkan child table
+CREATE OR REPLACE FUNCTION get_parent_table_info(
+    child_table_name text,
+    row_data jsonb
+)
+RETURNS TABLE(
+    parent_table text,
+    parent_key text
+) AS $$
+DECLARE
+    v_parent_table text;
+    v_parent_key text;
+BEGIN
+    -- Mapping child table ke parent table
+    CASE child_table_name
+        -- Quality Training: DetailQualityTraining dan SubdetailQualityTraining -> JenisQualityTraining
+        WHEN 'detail_quality_trainings' THEN
+            v_parent_table := 'jenis_quality_trainings';
+            v_parent_key := (row_data->>'jenisQualityTrainingId')::text;
+        
+        WHEN 'subdetail_quality_trainings' THEN
+            -- Get jenisQualityTrainingId dari detailQualityTrainingId
+            BEGIN
+                SELECT "jenisQualityTrainingId" INTO v_parent_key
+                FROM detail_quality_trainings
+                WHERE id = (row_data->>'detailQualityTrainingId')::text;
+            EXCEPTION WHEN OTHERS THEN
+                v_parent_key := NULL;
+            END;
+            v_parent_table := 'jenis_quality_trainings';
+        
+        -- Knowledge: DetailKnowledge dan JenisDetailKnowledge -> Knowledge
+        WHEN 'detail_knowledges' THEN
+            v_parent_table := 'knowledges';
+            v_parent_key := (row_data->>'knowledgeId')::text;
+        
+        WHEN 'jenis_detail_knowledges' THEN
+            -- Get knowledgeId dari detailKnowledgeId
+            BEGIN
+                SELECT "knowledgeId" INTO v_parent_key
+                FROM detail_knowledges
+                WHERE id = (row_data->>'detailKnowledgeId')::text;
+            EXCEPTION WHEN OTHERS THEN
+                v_parent_key := NULL;
+            END;
+            v_parent_table := 'knowledges';
+        
+        -- SOP: DetailSOP -> JenisSOP
+        WHEN 'detail_sops' THEN
+            v_parent_table := 'jenis_sops';
+            v_parent_key := (row_data->>'jenisSOPId')::text;
+        
+        -- Produk: DetailProduk -> Produk
+        WHEN 'detail_produks' THEN
+            v_parent_table := 'produks';
+            v_parent_key := (row_data->>'produkId')::text;
+        
+        ELSE
+            -- Tidak ada parent, gunakan table asli
+            v_parent_table := child_table_name;
+            v_parent_key := (row_data->>'id')::text;
+    END CASE;
+    
+    RETURN QUERY SELECT v_parent_table, v_parent_key;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Buat fungsi trigger yang akan mencatat perubahan
 CREATE OR REPLACE FUNCTION audit_trigger_function()
 RETURNS TRIGGER AS $$
@@ -223,12 +291,15 @@ DECLARE
     changed_by_val text;
     key_value text;
     table_name text;
+    parent_table_info record;
     field_name text;
     old_val text;
     new_val text;
     pk_column text;
     related_ids record;
     current_row_data jsonb;
+    source_table_to_use text;
+    source_key_to_use text;
 BEGIN
     -- Dapatkan nama tabel
     table_name := TG_TABLE_NAME;
@@ -255,10 +326,19 @@ BEGIN
         pk_column := 'id';
     END IF;
     
+    -- Initialize default values
+    source_table_to_use := table_name;
+    source_key_to_use := 'unknown';
+    
     -- Handle INSERT
     IF TG_OP = 'INSERT' THEN
         new_data := to_jsonb(NEW);
         current_row_data := new_data;
+        
+        -- Get parent table info (untuk simplify tracer update)
+        SELECT * INTO parent_table_info FROM get_parent_table_info(table_name, new_data);
+        source_table_to_use := COALESCE(parent_table_info.parent_table, table_name);
+        source_key_to_use := COALESCE(parent_table_info.parent_key, 'unknown');
         
         -- Dapatkan nilai primary key
         key_value := (new_data->>pk_column)::text;
@@ -266,7 +346,7 @@ BEGIN
             key_value := 'unknown';
         END IF;
         
-        -- Resolve related IDs
+        -- Resolve related IDs menggunakan table asli (untuk mendapatkan related IDs yang benar)
         SELECT * INTO related_ids FROM resolve_related_ids(table_name, new_data);
         
         -- Catat semua kolom untuk INSERT
@@ -292,8 +372,8 @@ BEGIN
                 quality_training_id
             ) VALUES (
                 gen_random_uuid()::text,
-                table_name,
-                key_value,
+                source_table_to_use,
+                source_key_to_use,
                 field_name,
                 NULL,
                 new_val,
@@ -319,13 +399,18 @@ BEGIN
         -- Use NEW data for resolving related IDs (in case foreign keys changed)
         current_row_data := new_data;
         
+        -- Get parent table info (untuk simplify tracer update)
+        SELECT * INTO parent_table_info FROM get_parent_table_info(table_name, new_data);
+        source_table_to_use := COALESCE(parent_table_info.parent_table, table_name);
+        source_key_to_use := COALESCE(parent_table_info.parent_key, 'unknown');
+        
         -- Dapatkan nilai primary key
         key_value := (old_data->>pk_column)::text;
         IF key_value IS NULL THEN
             key_value := 'unknown';
         END IF;
         
-        -- Resolve related IDs menggunakan data baru (NEW)
+        -- Resolve related IDs menggunakan table asli (untuk mendapatkan related IDs yang benar)
         SELECT * INTO related_ids FROM resolve_related_ids(table_name, new_data);
         
         -- Catat hanya kolom yang berubah
@@ -337,11 +422,13 @@ BEGIN
             -- Hanya catat jika nilai berubah
             -- Gunakan IS DISTINCT FROM untuk handle NULL dengan benar
             IF old_val IS DISTINCT FROM new_val THEN
-                -- Jika foreign key berubah, resolve ulang related IDs
-                IF field_name IN ('brandId', 'categoryId', 'subkategoriProdukId', 'produkId', 
-                                  'knowledgeId', 'detailKnowledgeId', 'jenisDetailKnowledgeId',
-                                  'sopId', 'jenisSOPId', 'qualityTrainingId', 'jenisQualityTrainingId', 
-                                  'detailQualityTrainingId', 'kategoriProdukId') THEN
+                -- Jika foreign key berubah yang mempengaruhi parent, update parent info
+                IF field_name IN ('jenisQualityTrainingId', 'detailQualityTrainingId', 
+                                  'knowledgeId', 'detailKnowledgeId',
+                                  'jenisSOPId', 'produkId') THEN
+                    SELECT * INTO parent_table_info FROM get_parent_table_info(table_name, new_data);
+                    source_table_to_use := COALESCE(parent_table_info.parent_table, table_name);
+                    source_key_to_use := COALESCE(parent_table_info.parent_key, key_value);
                     SELECT * INTO related_ids FROM resolve_related_ids(table_name, new_data);
                 END IF;
                 
@@ -363,8 +450,8 @@ BEGIN
                     quality_training_id
                 ) VALUES (
                     gen_random_uuid()::text,
-                    table_name,
-                    key_value,
+                    source_table_to_use,
+                    source_key_to_use,
                     field_name,
                     old_val,
                     new_val,
@@ -389,13 +476,18 @@ BEGIN
         old_data := to_jsonb(OLD);
         current_row_data := old_data;
         
+        -- Get parent table info (untuk simplify tracer update)
+        SELECT * INTO parent_table_info FROM get_parent_table_info(table_name, old_data);
+        source_table_to_use := COALESCE(parent_table_info.parent_table, table_name);
+        source_key_to_use := COALESCE(parent_table_info.parent_key, 'unknown');
+        
         -- Dapatkan nilai primary key
         key_value := (old_data->>pk_column)::text;
         IF key_value IS NULL THEN
             key_value := 'unknown';
         END IF;
         
-        -- Resolve related IDs menggunakan data lama (OLD)
+        -- Resolve related IDs menggunakan table asli (untuk mendapatkan related IDs yang benar)
         SELECT * INTO related_ids FROM resolve_related_ids(table_name, old_data);
         
         -- Catat semua kolom untuk DELETE
@@ -421,8 +513,8 @@ BEGIN
                 quality_training_id
             ) VALUES (
                 gen_random_uuid()::text,
-                table_name,
-                key_value,
+                source_table_to_use,
+                source_key_to_use,
                 field_name,
                 old_val,
                 NULL,

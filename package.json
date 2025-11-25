@@ -13,6 +13,7 @@
     "db:seed": "ts-node --project tsconfig.scripts.json prisma/seed.ts",
     "setup:audit": "ts-node --project tsconfig.scripts.json scripts/setup-audit-triggers.ts",
     "check:audit": "ts-node --project tsconfig.scripts.json scripts/check-audit-triggers.ts",
+    "clear:tracer": "ts-node --project tsconfig.scripts.json scripts/clear-tracer-updates.ts",
     "populate:brand-id": "ts-node --project tsconfig.scripts.json scripts/populate-brand-id.ts"
   },
   "dependencies": {
